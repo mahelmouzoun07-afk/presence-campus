@@ -6,7 +6,7 @@
     <field name="name">school.student.attendance.stats.list</field>
     <field name="model">school.student</field>
     <field name="arch" type="xml">
-      <list decoration-danger="at_risk" default_order="attendance_rate asc">
+      <list decoration-danger="at_risk">
         <field name="name"/>
         <field name="matricule"/>
         <field name="promotion_id"/>

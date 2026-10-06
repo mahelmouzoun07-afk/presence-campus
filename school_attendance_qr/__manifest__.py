@@ -1,6 +1,6 @@
 {
     'name': 'School Attendance QR',
-    'version': '18.0.7.0.0',
+    'version': '18.0.7.1.0',
     'summary': "Présence par QR permanent (entrée + sortie), séances générées depuis l'emploi du temps",
     'category': 'Education',
     'depends': ['school_base', 'mail', 'portal'],

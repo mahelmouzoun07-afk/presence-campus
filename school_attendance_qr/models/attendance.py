@@ -82,8 +82,9 @@ class SchoolRoomQr(models.Model):
     @api.depends('qr_token')
     def _compute_scan_url(self):
         base = _get_base_url()
+        db = self.env.cr.dbname
         for rec in self:
-            rec.scan_url = f"{base}/school/attendance/scan/{rec.qr_token}" if rec.qr_token else False
+            rec.scan_url = f"{base}/school/attendance/scan/{rec.qr_token}?db={db}" if rec.qr_token else False
 
     @api.depends('scan_url')
     def _compute_qr_image(self):
