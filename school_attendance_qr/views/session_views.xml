@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_attendance_session_list" model="ir.ui.view">
+    <field name="name">school.attendance.session.list</field>
+    <field name="model">school.attendance.session</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="name"/>
+        <field name="room_id"/>
+        <field name="time_start"/>
+        <field name="time_end"/>
+        <field name="present_count" string="Entrées"/>
+        <field name="full_attendance_count" string="Entrées + sorties"/>
+      </list>
+    </field>
+  </record>
+  <record id="view_attendance_session_form" model="ir.ui.view">
+    <field name="name">school.attendance.session.form</field>
+    <field name="model">school.attendance.session</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_start_now" type="object" string="Démarrer maintenant" class="btn-primary"/>
+        </header>
+        <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button type="object" name="action_view_records" class="oe_stat_button" icon="fa-users">
+              <field name="present_count" widget="statinfo" string="entrées"/>
+            </button>
+            <button type="object" name="action_view_records" class="oe_stat_button" icon="fa-check-circle">
+              <field name="full_attendance_count" widget="statinfo" string="présences complètes"/>
+            </button>
+          </div>
+          <group>
+            <group>
+              <field name="course_id"/><field name="teacher_id"/><field name="room_id"/>
+              <field name="slot_id" readonly="1"/>
+            </group>
+            <group>
+              <field name="date"/><field name="time_start"/><field name="duration_minutes"/>
+              <field name="time_end" readonly="1"/>
+              <field name="checkin_window_minutes"/><field name="checkout_window_minutes"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="action_attendance_session" model="ir.actions.act_window">
+    <field name="name">Séances</field>
+    <field name="res_model">school.attendance.session</field>
+    <field name="view_mode">list,form</field>
+  </record>
+  <menuitem id="menu_attendance_session" name="Séances" parent="school_base.menu_school_root" action="action_attendance_session" sequence="45"/>
+</odoo>

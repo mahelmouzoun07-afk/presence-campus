@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Suivi par étudiant : qui a des absences répétées -->
+  <record id="view_student_attendance_stats_list" model="ir.ui.view">
+    <field name="name">school.student.attendance.stats.list</field>
+    <field name="model">school.student</field>
+    <field name="arch" type="xml">
+      <list decoration-danger="at_risk" default_order="attendance_rate asc">
+        <field name="name"/>
+        <field name="matricule"/>
+        <field name="promotion_id"/>
+        <field name="sessions_expected"/>
+        <field name="sessions_attended"/>
+        <field name="sessions_missed"/>
+        <field name="attendance_rate" widget="percentage"/>
+        <field name="at_risk"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_student_attendance_stats_search" model="ir.ui.view">
+    <field name="name">school.student.attendance.stats.search</field>
+    <field name="model">school.student</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name"/>
+        <field name="matricule"/>
+        <field name="course_ids"/>
+        <field name="promotion_id"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Promotion" name="group_promotion" context="{'group_by': 'promotion_id'}"/>
+          <filter string="Cours" name="group_course" context="{'group_by': 'course_ids'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_student_attendance_stats" model="ir.actions.act_window">
+    <field name="name">Absences par étudiant</field>
+    <field name="res_model">school.student</field>
+    <field name="view_mode">list,form</field>
+    <field name="view_id" ref="view_student_attendance_stats_list"/>
+    <field name="search_view_id" ref="view_student_attendance_stats_search"/>
+  </record>
+
+  <!-- Vue partagée pour toutes les statistiques de présence (pivot/graphe/liste) -->
+  <record id="view_attendance_record_search" model="ir.ui.view">
+    <field name="name">school.attendance.record.search</field>
+    <field name="model">school.attendance.record</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="student_id"/>
+        <field name="course_id"/>
+        <field name="promotion_id"/>
+        <field name="teacher_id"/>
+        <filter string="Aujourd'hui" name="today" domain="[('session_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+        <filter string="Cette semaine" name="this_week"
+                domain="[('session_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+        <separator/>
+        <filter string="Rejetées / hors zone" name="rejected" domain="[('state', '=', 'rejected')]"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Étudiant" name="group_student" context="{'group_by': 'student_id'}"/>
+          <filter string="Cours" name="group_course" context="{'group_by': 'course_id'}"/>
+          <filter string="Promotion" name="group_promotion" context="{'group_by': 'promotion_id'}"/>
+          <filter string="Enseignant" name="group_teacher" context="{'group_by': 'teacher_id'}"/>
+          <filter string="Date du cours" name="group_date" context="{'group_by': 'session_date'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="view_attendance_record_list" model="ir.ui.view">
+    <field name="name">school.attendance.record.list</field>
+    <field name="model">school.attendance.record</field>
+    <field name="arch" type="xml">
+      <list decoration-warning="state=='flagged' or checkout_state=='flagged'"
+            decoration-danger="state=='rejected' or checkout_state=='rejected'"
+            decoration-success="attendance_complete">
+        <field name="session_date"/>
+        <field name="course_id"/>
+        <field name="promotion_id"/>
+        <field name="teacher_id"/>
+        <field name="student_id"/>
+        <field name="scan_datetime" string="Entrée"/>
+        <field name="state"/>
+        <field name="checkout_scan_datetime" string="Sortie"/>
+        <field name="checkout_state"/>
+        <field name="attendance_complete" string="Complète"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_attendance_record_pivot" model="ir.ui.view">
+    <field name="name">school.attendance.record.pivot</field>
+    <field name="model">school.attendance.record</field>
+    <field name="arch" type="xml">
+      <pivot>
+        <field name="course_id" type="row"/>
+        <field name="state" type="col"/>
+      </pivot>
+    </field>
+  </record>
+
+  <record id="view_attendance_record_graph" model="ir.ui.view">
+    <field name="name">school.attendance.record.graph</field>
+    <field name="model">school.attendance.record</field>
+    <field name="arch" type="xml">
+      <graph type="bar" stacked="1">
+        <field name="session_date" interval="week"/>
+        <field name="state" type="col"/>
+      </graph>
+    </field>
+  </record>
+
+  <!-- Une action générale, et trois raccourcis pré-filtrés pour ne pas -->
+  <!-- demander au secrétariat de savoir manier le regroupement lui-même -->
+  <record id="action_attendance_overview" model="ir.actions.act_window">
+    <field name="name">Vue d'ensemble des présences</field>
+    <field name="res_model">school.attendance.record</field>
+    <field name="view_mode">graph,pivot,list</field>
+    <field name="search_view_id" ref="view_attendance_record_search"/>
+    <field name="context">{'search_default_today': 1}</field>
+  </record>
+
+  <record id="action_attendance_by_course" model="ir.actions.act_window">
+    <field name="name">Absences par cours</field>
+    <field name="res_model">school.attendance.record</field>
+    <field name="view_mode">pivot,list,graph</field>
+    <field name="search_view_id" ref="view_attendance_record_search"/>
+    <field name="context">{'search_default_group_course': 1}</field>
+  </record>
+
+  <record id="action_attendance_by_promotion" model="ir.actions.act_window">
+    <field name="name">Absences par promotion</field>
+    <field name="res_model">school.attendance.record</field>
+    <field name="view_mode">pivot,list,graph</field>
+    <field name="search_view_id" ref="view_attendance_record_search"/>
+    <field name="context">{'search_default_group_promotion': 1}</field>
+  </record>
+
+  <record id="action_attendance_by_teacher" model="ir.actions.act_window">
+    <field name="name">Statistiques par enseignant / cours</field>
+    <field name="res_model">school.attendance.record</field>
+    <field name="view_mode">pivot,list,graph</field>
+    <field name="search_view_id" ref="view_attendance_record_search"/>
+    <field name="context">{'search_default_group_teacher': 1}</field>
+  </record>
+
+  <menuitem id="menu_attendance_stats_root" name="Statistiques" parent="school_base.menu_school_root" sequence="60"/>
+  <menuitem id="menu_attendance_overview" name="Vue d'ensemble (aujourd'hui)" parent="menu_attendance_stats_root"
+            action="action_attendance_overview" sequence="10"/>
+  <menuitem id="menu_student_attendance_stats" name="Absences par étudiant" parent="menu_attendance_stats_root"
+            action="action_student_attendance_stats" sequence="20"/>
+  <menuitem id="menu_attendance_by_course" name="Absences par cours" parent="menu_attendance_stats_root"
+            action="action_attendance_by_course" sequence="30"/>
+  <menuitem id="menu_attendance_by_promotion" name="Absences par promotion" parent="menu_attendance_stats_root"
+            action="action_attendance_by_promotion" sequence="40"/>
+  <menuitem id="menu_attendance_by_teacher" name="Par enseignant / cours" parent="menu_attendance_stats_root"
+            action="action_attendance_by_teacher" sequence="50"/>
+
+</odoo>

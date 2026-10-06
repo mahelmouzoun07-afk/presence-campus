@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_school_room_list" model="ir.ui.view">
+    <field name="name">school.room.list</field>
+    <field name="model">school.room</field>
+    <field name="arch" type="xml">
+      <list><field name="name"/><field name="building"/><field name="capacity"/><field name="radius_meters"/></list>
+    </field>
+  </record>
+  <record id="view_school_room_form" model="ir.ui.view">
+    <field name="name">school.room.form</field>
+    <field name="model">school.room</field>
+    <field name="arch" type="xml">
+      <form>
+        <header/>
+        <sheet>
+          <group>
+            <group string="Salle"><field name="name"/><field name="building"/><field name="capacity"/></group>
+            <group string="Position GPS"><field name="latitude"/><field name="longitude"/><field name="radius_meters"/></group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="action_school_room" model="ir.actions.act_window">
+    <field name="name">Salles</field><field name="res_model">school.room</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <record id="view_school_slot_list" model="ir.ui.view">
+    <field name="name">school.timetable.slot.list</field>
+    <field name="model">school.timetable.slot</field>
+    <field name="arch" type="xml">
+      <list editable="bottom">
+        <field name="weekday"/>
+        <field name="start_time" widget="float_time"/>
+        <field name="course_id"/>
+        <field name="room_id"/>
+        <field name="teacher_id"/>
+        <field name="duration_minutes"/>
+        <field name="checkin_window_minutes"/>
+        <field name="checkout_window_minutes"/>
+        <field name="date_from"/>
+        <field name="date_to"/>
+      </list>
+    </field>
+  </record>
+  <record id="action_school_slot" model="ir.actions.act_window">
+    <field name="name">Emploi du temps</field><field name="res_model">school.timetable.slot</field>
+    <field name="view_mode">list</field>
+    <field name="context">{'group_by': 'weekday'}</field>
+  </record>
+
+  <menuitem id="menu_school_room" name="Salles" parent="menu_school_root" action="action_school_room" sequence="30"/>
+  <menuitem id="menu_school_slot" name="Emploi du temps" parent="menu_school_root" action="action_school_slot" sequence="40"/>
+</odoo>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_school_room_form_qr" model="ir.ui.view">
+    <field name="name">school.room.form.qr</field>
+    <field name="model">school.room</field>
+    <field name="inherit_id" ref="school_base.view_school_room_form"/>
+    <field name="arch" type="xml">
+      <sheet position="inside">
+        <group string="QR de présence (permanent, à imprimer)">
+          <field name="scan_url" readonly="1"/>
+          <field name="qr_image" widget="image" options="{'size': [220, 220]}" readonly="1"/>
+          <p class="text-muted">
+            Ce code ne change jamais : colle l'adresse ci-dessus dans un générateur de QR
+            (par exemple EZQR) pour obtenir une image à imprimer et à coller dans la salle.
+          </p>
+        </group>
+      </sheet>
+    </field>
+  </record>
+</odoo>

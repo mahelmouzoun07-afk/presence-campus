@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="ir_cron_generate_sessions" model="ir.cron">
+    <field name="name">École : générer les séances du jour depuis l'emploi du temps</field>
+    <field name="model_id" ref="model_school_attendance_session"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_generate_sessions()</field>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">15</field>
+    <field name="interval_type">minutes</field>
+    <field name="active">True</field>
+  </record>
+
+  <record id="ir_cron_flag_missing_checkouts" model="ir.cron">
+    <field name="name">École : signaler les sorties non scannées</field>
+    <field name="model_id" ref="model_school_attendance_session"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_flag_missing_checkouts()</field>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">15</field>
+    <field name="interval_type">minutes</field>
+    <field name="active">True</field>
+  </record>
+</odoo>
