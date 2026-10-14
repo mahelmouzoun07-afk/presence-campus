@@ -10,6 +10,23 @@
       </list>
     </field>
   </record>
+
+  <record id="view_school_student_search" model="ir.ui.view">
+    <field name="name">school.student.search</field>
+    <field name="model">school.student</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name" string="Nom, identifiant ou matricule"
+               filter_domain="['|', '|', ('name', 'ilike', self), ('identifiant', 'ilike', self), ('matricule', 'ilike', self)]"/>
+        <field name="promotion_id"/>
+        <field name="course_ids"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Promotion" name="group_promotion" context="{'group_by': 'promotion_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
   <record id="view_school_student_form" model="ir.ui.view">
     <field name="name">school.student.form</field>
     <field name="model">school.student</field>
@@ -17,8 +34,10 @@
       <form>
         <header>
           <button name="action_reset_device" type="object" string="Réinitialiser l'appareil (changement de téléphone)"
+                  groups="school_base.group_school_admin"
                   invisible="not device_fingerprint" confirm="Au prochain scan, le nouvel appareil utilisé sera enregistré comme appareil de référence. Continuer ?"/>
           <button name="action_reset_password" type="object" string="Réinitialiser le mot de passe (= matricule)"
+                  groups="school_base.group_school_admin"
                   invisible="not user_id" confirm="Le mot de passe du compte sera remis au matricule de l'étudiant. Vérifiez son identité avant de confirmer. Continuer ?"/>
         </header>
         <sheet>
@@ -32,22 +51,50 @@
               <field name="email"/><field name="phone"/><field name="birthdate"/>
             </group>
           </group>
-          <group>
-            <group string="Compte et cours">
-              <field name="user_id"/>
-              <field name="promotion_id"/>
+          <notebook>
+            <page string="Cours et compte" name="courses">
+              <group>
+                <group>
+                  <field name="user_id"/>
+                  <field name="promotion_id"/>
+                </group>
+                <group string="Sécurité de connexion" groups="school_base.group_school_admin">
+                  <field name="device_fingerprint" readonly="1"/>
+                  <field name="device_bound_at" readonly="1"/>
+                  <field name="last_login_ip" readonly="1"/>
+                </group>
+              </group>
               <field name="course_ids" widget="many2many_tags"/>
-            </group>
-            <group string="Sécurité de connexion">
-              <field name="device_fingerprint" readonly="1"/>
-              <field name="device_bound_at" readonly="1"/>
-              <field name="last_login_ip" readonly="1"/>
-            </group>
-          </group>
+            </page>
+            <page string="Scolarité" name="fees" groups="school_base.group_school_admin">
+              <group>
+                <group>
+                  <field name="currency_id" invisible="1"/>
+                  <field name="fees_due"/>
+                  <field name="fees_paid"/>
+                  <field name="fees_balance"/>
+                </group>
+                <group>
+                  <field name="payment_status" widget="badge"
+                         decoration-success="payment_status == 'paid'" decoration-warning="payment_status == 'partial'"
+                         decoration-danger="payment_status == 'unpaid'" decoration-info="payment_status == 'exempt'"/>
+                  <field name="fees_exempt"/>
+                </group>
+              </group>
+              <field name="payment_ids">
+                <list editable="bottom">
+                  <field name="currency_id" column_invisible="1"/>
+                  <field name="date"/><field name="amount"/><field name="method"/>
+                  <field name="reference"/><field name="note"/>
+                </list>
+              </field>
+            </page>
+          </notebook>
         </sheet>
       </form>
     </field>
   </record>
+
   <record id="view_school_course_list" model="ir.ui.view">
     <field name="name">school.course.list</field>
     <field name="model">school.course</field>
@@ -55,6 +102,22 @@
       <list><field name="name"/><field name="teacher_id"/></list>
     </field>
   </record>
+  <record id="view_school_course_form" model="ir.ui.view">
+    <field name="name">school.course.form</field>
+    <field name="model">school.course</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <group><field name="name"/><field name="teacher_id"/></group>
+          <separator string="Étudiants inscrits"/>
+          <field name="student_ids" nolabel="1">
+            <list><field name="nom"/><field name="prenom"/><field name="matricule"/></list>
+          </field>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
   <record id="action_school_student" model="ir.actions.act_window">
     <field name="name">Élèves</field><field name="res_model">school.student</field>
     <field name="view_mode">list,form</field>
@@ -63,7 +126,10 @@
     <field name="name">Cours</field><field name="res_model">school.course</field>
     <field name="view_mode">list,form</field>
   </record>
-  <menuitem id="menu_school_root" name="École" sequence="10"/>
-  <menuitem id="menu_school_student" name="Élèves" parent="menu_school_root" action="action_school_student"/>
-  <menuitem id="menu_school_course" name="Cours" parent="menu_school_root" action="action_school_course"/>
+
+  <menuitem id="menu_school_root" name="École" sequence="10" groups="school_base.group_school_teacher"/>
+  <menuitem id="menu_school_student" name="Élèves" parent="menu_school_root" action="action_school_student"
+            sequence="20" groups="school_base.group_school_admin"/>
+  <menuitem id="menu_school_course" name="Cours" parent="menu_school_root" action="action_school_course"
+            sequence="25" groups="school_base.group_school_teacher"/>
 </odoo>

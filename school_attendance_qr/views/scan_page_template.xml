@@ -199,33 +199,12 @@
     </t>
   </template>
 
-  <!-- Vue backend : liste des présences pour l'enseignant / le secrétariat -->
-  <record id="view_attendance_record_list" model="ir.ui.view">
-    <field name="name">school.attendance.record.list</field>
-    <field name="model">school.attendance.record</field>
-    <field name="arch" type="xml">
-      <list decoration-warning="state=='flagged' or checkout_state=='flagged'"
-            decoration-danger="state=='rejected' or checkout_state=='rejected'"
-            decoration-success="attendance_complete">
-        <field name="session_id"/>
-        <field name="student_id"/>
-        <field name="scan_datetime" string="Entrée"/>
-        <field name="state"/>
-        <field name="checkout_scan_datetime" string="Sortie"/>
-        <field name="checkout_state"/>
-        <field name="attendance_complete" string="Complète"/>
-        <field name="flag_reason"/>
-        <field name="checkout_flag_reason"/>
-      </list>
-    </field>
-  </record>
-
   <record id="action_attendance_record" model="ir.actions.act_window">
     <field name="name">Présences (QR)</field>
     <field name="res_model">school.attendance.record</field>
     <field name="view_mode">list,form</field>
   </record>
 
-  <menuitem id="menu_attendance_qr" name="Présences" parent="school_base.menu_school_root" action="action_attendance_record" sequence="50"/>
+  <menuitem id="menu_attendance_qr" name="Présences" parent="school_base.menu_school_root" action="action_attendance_record" sequence="50" groups="school_base.group_school_teacher"/>
 
 </odoo>

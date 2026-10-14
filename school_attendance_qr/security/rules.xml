@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="rule_attendance_session_admin" model="ir.rule">
+    <field name="name">Séances : administration, toutes</field>
+    <field name="model_id" ref="model_school_attendance_session"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+  <record id="rule_attendance_session_teacher" model="ir.rule">
+    <field name="name">Séances : enseignant, les siennes</field>
+    <field name="model_id" ref="model_school_attendance_session"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[('teacher_id.user_id', '=', user.id)]</field>
+  </record>
+  <record id="rule_attendance_record_admin" model="ir.rule">
+    <field name="name">Présences : administration, toutes</field>
+    <field name="model_id" ref="model_school_attendance_record"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+  <record id="rule_attendance_record_teacher" model="ir.rule">
+    <field name="name">Présences : enseignant, celles de ses séances</field>
+    <field name="model_id" ref="model_school_attendance_record"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[('teacher_id.user_id', '=', user.id)]</field>
+  </record>
+</odoo>

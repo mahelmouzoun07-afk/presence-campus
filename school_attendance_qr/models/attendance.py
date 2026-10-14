@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
-from odoo.http import request
+from odoo.exceptions import AccessError, ValidationError
+
+from .helpers import icp, icp_bool, icp_int
 
 DEFAULT_TZ = 'Africa/Porto-Novo'
 
@@ -53,51 +54,6 @@ def _is_on_campus_network(env, ip):
     return False
 
 
-def _get_base_url():
-    """Adresse publique à utiliser dans les liens de QR : l'adresse de la
-    requête en cours si on est dans une requête web (donc celle du domaine
-    ou du tunnel utilisé), sinon web.base.url en repli."""
-    try:
-        if request and request.httprequest:
-            return request.httprequest.host_url.rstrip('/')
-    except Exception:
-        pass
-    from odoo import api as _api
-    env = _api.Environment(request.env.cr, request.env.uid, {}) if request else None
-    return ''
-
-
-class SchoolRoomQr(models.Model):
-    """Ajoute à la salle le QR permanent affiché au mur : un seul code par
-    salle, qui ne change jamais (compatible avec un générateur externe
-    comme EZQR, qui ne propose le code modifiable qu'en payant)."""
-    _inherit = 'school.room'
-
-    qr_token = fields.Char(default=lambda self: secrets.token_urlsafe(16), readonly=True, copy=False)
-    scan_url = fields.Char(compute='_compute_scan_url',
-                           help="Colle cette adresse dans un générateur de QR (ex. EZQR) pour obtenir "
-                                "l'image à imprimer et coller au mur. Le code ne change jamais.")
-    qr_image = fields.Binary(compute='_compute_qr_image', attachment=False, string="Aperçu du QR")
-
-    @api.depends('qr_token')
-    def _compute_scan_url(self):
-        base = _get_base_url()
-        db = self.env.cr.dbname
-        for rec in self:
-            rec.scan_url = f"{base}/school/attendance/scan/{rec.qr_token}?db={db}" if rec.qr_token else False
-
-    @api.depends('scan_url')
-    def _compute_qr_image(self):
-        import qrcode
-        for rec in self:
-            if not rec.scan_url:
-                rec.qr_image = False
-                continue
-            buf = io.BytesIO()
-            qrcode.make(rec.scan_url).save(buf, format='PNG')
-            rec.qr_image = base64.b64encode(buf.getvalue())
-
-
 class SchoolAttendanceSession(models.Model):
     """Une occurrence concrète de cours : tel jour, telle heure, dans telle
     salle. Générée automatiquement depuis l'emploi du temps par une tâche
@@ -122,6 +78,14 @@ class SchoolAttendanceSession(models.Model):
     record_ids = fields.One2many('school.attendance.record', 'session_id')
     present_count = fields.Integer(compute='_compute_present_count')
     full_attendance_count = fields.Integer(compute='_compute_present_count', string="Présences complètes")
+    enrolled_count = fields.Integer(compute='_compute_absents', string="Inscrits")
+    absent_count = fields.Integer(compute='_compute_absents', string="Absents")
+    absent_student_ids = fields.Many2many('school.student', compute='_compute_absents',
+                                          string="Absents (pas encore scannés)")
+    live_status = fields.Selection([
+        ('upcoming', 'À venir'), ('checkin', 'Entrée ouverte'), ('ongoing', 'En cours'),
+        ('checkout', 'Sortie ouverte'), ('done', 'Terminée'),
+    ], compute='_compute_live_status', string="Statut")
 
     _sql_constraints = [
         ('slot_date_uniq', 'unique(slot_id, date)',
@@ -164,6 +128,30 @@ class SchoolAttendanceSession(models.Model):
                         f"La salle « {rec.room_id.name} » est déjà occupée par « {other.course_id.name} » "
                         f"sur ce créneau horaire.")
 
+    @api.depends('record_ids.state', 'course_id.student_ids')
+    def _compute_absents(self):
+        for rec in self:
+            enrolled = rec.course_id.sudo().student_ids
+            present = rec.record_ids.filtered(lambda r: r.state != 'rejected').mapped('student_id')
+            absent = enrolled - present
+            rec.enrolled_count = len(enrolled)
+            rec.absent_count = len(absent)
+            rec.absent_student_ids = absent
+
+    def _compute_live_status(self):
+        now = fields.Datetime.now()
+        for rec in self:
+            if not rec.time_start or now < rec.time_start:
+                rec.live_status = 'upcoming'
+            elif rec.is_within_checkin_window():
+                rec.live_status = 'checkin'
+            elif rec.is_within_checkout_window():
+                rec.live_status = 'checkout'
+            elif now <= rec.time_end:
+                rec.live_status = 'ongoing'
+            else:
+                rec.live_status = 'done'
+
     def action_view_records(self):
         self.ensure_one()
         return {
@@ -175,7 +163,12 @@ class SchoolAttendanceSession(models.Model):
         }
 
     def action_start_now(self):
-        self.write({'time_start': fields.Datetime.now()})
+        """Ouvre la fenêtre d'entrée maintenant. Un enseignant ne peut démarrer que ses propres séances."""
+        for rec in self:
+            if not (self.env.su or self.env.user.has_group('school_base.group_school_admin')
+                    or rec.teacher_id.user_id == self.env.user):
+                raise AccessError(_("Vous ne pouvez démarrer que vos propres séances."))
+        self.sudo().write({'time_start': fields.Datetime.now()})
 
     def is_within_checkin_window(self):
         self.ensure_one()
@@ -207,6 +200,10 @@ class SchoolAttendanceSession(models.Model):
             if missing:
                 missing.write({'checkout_state': 'rejected',
                                'checkout_flag_reason': "N'a pas scanné la sortie"})
+                for r in missing:
+                    self.env['school.attendance.task'].create_unique(
+                        'missing_checkout', r.student_id, f"Sortie non scannée : {r.student_id.name}",
+                        f"Cours « {session.course_id.name} » du {session.date}.", record=r)
 
     @api.model
     def _cron_generate_sessions(self):
@@ -337,14 +334,40 @@ class SchoolAttendanceRecord(models.Model):
         student = self.env['school.student'].sudo().browse(student_id)
         student.write({'last_login_ip': client_ip})
         self._check_device_binding(student, device_fingerprint)
+        payment_reason = self._payment_policy_check(student)
 
         accuracy = max(float(accuracy or 0.0), 0.0)
 
         if session.is_within_checkin_window():
-            return self._register_checkin(session, student, latitude, longitude, device_fingerprint, accuracy, client_ip)
+            return self._register_checkin(session, student, latitude, longitude, device_fingerprint, accuracy,
+                                          client_ip, payment_reason)
         if session.is_within_checkout_window():
             return self._register_checkout(session, student, latitude, longitude, device_fingerprint, accuracy, client_ip)
         raise ValidationError(_("Aucune fenêtre de scan (entrée ou sortie) n'est ouverte actuellement pour ce cours."))
+
+    def _payment_policy_check(self, student):
+        """Applique le réglage « scolarité impayée » (Paramètres > École).
+        Renvoie un motif à signaler en mode « signaler », lève une erreur en mode « bloquer »."""
+        policy = icp(self.env, 'payment_policy', 'off')
+        if policy == 'off':
+            return False
+        status = student.payment_status
+        if not (status == 'unpaid' or (status == 'partial' and icp_bool(self.env, 'payment_include_partial'))):
+            return False
+        if policy == 'block':
+            self.env['school.attendance.task'].create_unique(
+                'payment', student, f"Scan bloqué, scolarité impayée : {student.name}",
+                "L'étudiant a tenté de confirmer sa présence mais sa scolarité n'est pas à jour.")
+            raise ValidationError(_(
+                "Votre scolarité n'est pas à jour. Présentez-vous à la comptabilité pour régulariser votre "
+                "situation : votre présence n'est pas enregistrée en attendant."))
+        return "Scolarité impayée"
+
+    def _log_device_attempt(self, student):
+        self.env['school.attendance.task'].create_unique(
+            'device_attempt', student, f"Autre appareil détecté : {student.name}",
+            "Un scan a été refusé car ce compte est lié à un autre téléphone. S'il a changé de téléphone, "
+            "autorisez le nouvel appareil ; sinon quelqu'un utilise peut-être son compte.")
 
     @staticmethod
     def _check_device_binding(student, device_fingerprint):
@@ -371,7 +394,8 @@ class SchoolAttendanceRecord(models.Model):
                 return candidate
         return False
 
-    def _register_checkin(self, session, student, latitude, longitude, device_fingerprint, accuracy, client_ip):
+    def _register_checkin(self, session, student, latitude, longitude, device_fingerprint, accuracy, client_ip,
+                          payment_reason=False):
         if student not in session.course_id.student_ids:
             raise ValidationError(_("Vous n'êtes pas inscrit à ce cours."))
 
@@ -390,9 +414,14 @@ class SchoolAttendanceRecord(models.Model):
         distance, state, reason = self._evaluate_distance(session.room_id, latitude, longitude, accuracy)
 
         if state != 'rejected' and device_fingerprint != student.device_fingerprint:
+            self._log_device_attempt(student)
             raise ValidationError(_(
                 "Ce compte est déjà associé à un autre appareil. Si vous avez changé de téléphone, "
                 "demandez au secrétariat de réinitialiser l'appareil enregistré sur votre compte."))
+
+        if payment_reason and state != 'rejected':
+            state = 'flagged'
+            reason = self._join_reasons(reason, payment_reason)
 
         vals = {
             'session_id': session.id, 'student_id': student.id,
@@ -407,6 +436,13 @@ class SchoolAttendanceRecord(models.Model):
             record = self.sudo().create(vals)
 
         record._check_cross_student_device_conflict('checkin')
+        Task = self.env['school.attendance.task']
+        if record.state == 'flagged':
+            Task.create_unique('flagged_entry', student, f"Entrée à vérifier : {student.name}",
+                               record.flag_reason or '', record=record)
+        if payment_reason and record.state != 'rejected':
+            Task.create_unique('payment', student, f"Scolarité impayée : {student.name}",
+                               "Présence enregistrée mais signalée (réglage « signaler »).", session=session)
         return {
             'phase': 'checkin', 'state': record.state, 'flag_reason': record.flag_reason,
             'course_name': session.course_id.name,
@@ -420,6 +456,7 @@ class SchoolAttendanceRecord(models.Model):
             raise ValidationError(_("Sortie déjà confirmée pour ce cours."))
 
         if device_fingerprint != student.device_fingerprint:
+            self._log_device_attempt(student)
             raise ValidationError(_(
                 "Ce compte est déjà associé à un autre appareil. Si vous avez changé de téléphone, "
                 "demandez au secrétariat de réinitialiser l'appareil enregistré sur votre compte."))
@@ -432,6 +469,10 @@ class SchoolAttendanceRecord(models.Model):
             'checkout_state': state, 'checkout_flag_reason': reason,
         })
         record._check_cross_student_device_conflict('checkout')
+        if record.checkout_state == 'flagged':
+            self.env['school.attendance.task'].create_unique(
+                'flagged_exit', student, f"Sortie à vérifier : {student.name}",
+                record.checkout_flag_reason or '', record=record)
         return {
             'phase': 'checkout', 'state': record.checkout_state, 'flag_reason': record.checkout_flag_reason,
             'course_name': session.course_id.name,
@@ -467,6 +508,11 @@ class SchoolAttendanceRecord(models.Model):
                 if o.checkout_state == 'valid':
                     o.write({'checkout_state': 'flagged',
                              'checkout_flag_reason': "Même appareil utilisé par plusieurs étudiants (24 h)"})
+            Task = self.env['school.attendance.task']
+            for r in (rec | others):
+                Task.create_unique(
+                    'device_shared', r.student_id, f"Appareil partagé : {r.student_id.name}",
+                    "Le même téléphone a servi pour plusieurs étudiants dans les dernières 24 h.", record=r)
             rec._notify_teacher(_("Incohérence détectée : le même appareil a servi pour %s et un autre étudiant.",
                                   rec.student_id.name))
 
@@ -490,13 +536,20 @@ class SchoolStudentAttendanceStats(models.Model):
     sessions_missed = fields.Integer(compute='_compute_attendance_stats', string="Séances manquées")
     attendance_rate = fields.Float(compute='_compute_attendance_stats', string="Taux de présence (%)")
     at_risk = fields.Boolean(compute='_compute_attendance_stats', string="Absences répétées",
-                             help="Taux de présence sous 70%, calculé à partir de 3 séances passées ou plus.")
+                             help="Taux de présence sous le seuil réglé dans Paramètres > École "
+                                  "(70 % à partir de 3 séances par défaut).")
 
     def _compute_attendance_stats(self):
         Session = self.env['school.attendance.session'].sudo()
         today = fields.Date.context_today(self)
+        min_sessions = icp_int(self.env, 'alert_min_sessions', 3)
+        threshold = icp_int(self.env, 'alert_rate', 70)
+        is_admin = self.env.su or self.env.user.has_group('school_base.group_school_admin')
         for student in self:
-            sessions = Session.search([('course_id', 'in', student.course_ids.ids), ('date', '<=', today)])
+            courses = student.sudo().course_ids
+            if not is_admin:  # un enseignant ne voit que les cours qu'il enseigne
+                courses = courses.filtered(lambda c: c.teacher_id.user_id == self.env.user)
+            sessions = Session.search([('course_id', 'in', courses.ids), ('date', '<=', today)])
             expected = len(sessions)
             attended = len(sessions.filtered(
                 lambda s: s.record_ids.filtered(lambda r: r.student_id == student and r.state != 'rejected')))
@@ -504,4 +557,11 @@ class SchoolStudentAttendanceStats(models.Model):
             student.sessions_attended = attended
             student.sessions_missed = expected - attended
             student.attendance_rate = round(attended / expected * 100, 1) if expected else 100.0
-            student.at_risk = expected >= 3 and student.attendance_rate < 70.0
+            student.at_risk = expected >= min_sessions and student.attendance_rate < threshold
+
+    def action_reset_device(self):
+        """En plus de libérer l'appareil, clôt les alertes « autre appareil » devenues sans objet."""
+        res = super().action_reset_device()
+        self.env['school.attendance.task'].sudo().search([
+            ('student_id', 'in', self.ids), ('task_type', '=', 'device_attempt'), ('state', '=', 'open')]).action_done()
+        return res

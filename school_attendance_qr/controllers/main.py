@@ -1,5 +1,8 @@
+import io
+
 from odoo import fields, http
-from odoo.http import request
+from odoo.exceptions import AccessError
+from odoo.http import request, content_disposition
 
 
 class AttendanceScanController(http.Controller):
@@ -59,3 +62,33 @@ class AttendanceScanController(http.Controller):
             )
         except Exception as e:
             return {'error': str(e)}
+
+    # --------------------------------------------------- impressions (admin)
+    def _check_admin(self):
+        if not (request.env.user.has_group('school_base.group_school_admin')
+                or request.env.user.has_group('school_base.group_school_teacher')):
+            raise AccessError("Accès réservé au personnel de l'établissement.")
+
+    @http.route('/school/qr/png/<int:room_id>', type='http', auth='user')
+    def qr_png(self, room_id):
+        self._check_admin()
+        room = request.env['school.room'].browse(room_id)
+        if not room.exists():
+            return request.not_found()
+        png = room._render_qr_png(box_size=20)
+        headers = [('Content-Type', 'image/png'),
+                   ('Content-Disposition', content_disposition(f"QR-{room.name}.png"))]
+        return request.make_response(png, headers=headers)
+
+    @http.route('/school/qr/poster', type='http', auth='user')
+    def qr_poster(self, ids):
+        self._check_admin()
+        room_ids = [int(i) for i in ids.split(',') if i.strip().isdigit()]
+        rooms = request.env['school.room'].browse(room_ids).exists()
+        if not rooms:
+            return request.not_found()
+        pdf = rooms._render_posters_pdf()
+        name = "Affiches-QR.pdf" if len(rooms) > 1 else f"Affiche-QR-{rooms.name}.pdf"
+        headers = [('Content-Type', 'application/pdf'),
+                   ('Content-Disposition', content_disposition(name))]
+        return request.make_response(pdf, headers=headers)

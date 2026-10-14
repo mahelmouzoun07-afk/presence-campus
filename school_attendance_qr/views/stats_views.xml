@@ -147,7 +147,8 @@
     <field name="context">{'search_default_group_teacher': 1}</field>
   </record>
 
-  <menuitem id="menu_attendance_stats_root" name="Statistiques" parent="school_base.menu_school_root" sequence="60"/>
+  <menuitem id="menu_attendance_stats_root" name="Statistiques" parent="school_base.menu_school_root" sequence="60"
+            groups="school_base.group_school_teacher"/>
   <menuitem id="menu_attendance_overview" name="Vue d'ensemble (aujourd'hui)" parent="menu_attendance_stats_root"
             action="action_attendance_overview" sequence="10"/>
   <menuitem id="menu_student_attendance_stats" name="Absences par étudiant" parent="menu_attendance_stats_root"
@@ -155,8 +156,8 @@
   <menuitem id="menu_attendance_by_course" name="Absences par cours" parent="menu_attendance_stats_root"
             action="action_attendance_by_course" sequence="30"/>
   <menuitem id="menu_attendance_by_promotion" name="Absences par promotion" parent="menu_attendance_stats_root"
-            action="action_attendance_by_promotion" sequence="40"/>
+            action="action_attendance_by_promotion" sequence="40" groups="school_base.group_school_admin"/>
   <menuitem id="menu_attendance_by_teacher" name="Par enseignant / cours" parent="menu_attendance_stats_root"
-            action="action_attendance_by_teacher" sequence="50"/>
+            action="action_attendance_by_teacher" sequence="50" groups="school_base.group_school_admin"/>
 
 </odoo>

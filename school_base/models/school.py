@@ -1,3 +1,5 @@
+import secrets
+
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -32,6 +34,32 @@ class SchoolTeacher(models.Model):
         ('email_uniq', 'unique(email)', "Un enseignant existe déjà avec cet e-mail."),
     ]
 
+    def action_create_user(self):
+        """Crée le compte de connexion de l'enseignant (limité à ses propres
+        cours et étudiants) et affiche son mot de passe provisoire."""
+        self.ensure_one()
+        if self.user_id:
+            raise ValidationError("Cet enseignant a déjà un compte de connexion.")
+        if not self.email:
+            raise ValidationError("Renseignez d'abord l'e-mail de l'enseignant : il sert d'identifiant de connexion.")
+        if self.env['res.users'].sudo().search_count([('login', '=', self.email)]):
+            raise ValidationError(f"Un compte existe déjà avec l'identifiant « {self.email} ».")
+        password = secrets.token_urlsafe(6)
+        user = self.env['res.users'].sudo().create({
+            'name': self.name, 'login': self.email, 'email': self.email, 'password': password,
+            'groups_id': [(6, 0, [self.env.ref('base.group_user').id,
+                                  self.env.ref('school_base.group_school_teacher').id])],
+        })
+        self.user_id = user.id
+        return {
+            'type': 'ir.actions.client', 'tag': 'display_notification',
+            'params': {
+                'title': "Compte enseignant créé", 'type': 'success', 'sticky': True,
+                'message': f"Identifiant : {self.email}   Mot de passe provisoire : {password}   "
+                           "(à communiquer à l'enseignant, qui pourra le changer ensuite).",
+            },
+        }
+
 
 class SchoolPromotion(models.Model):
     """Une promotion / cohorte (ex : 'L1 Info 2026-2027'), pour regrouper
@@ -41,6 +69,10 @@ class SchoolPromotion(models.Model):
     _order = 'name'
 
     name = fields.Char(required=True)
+    currency_id = fields.Many2one('res.currency', default=lambda self: self.env.company.currency_id)
+    tuition_fee = fields.Monetary(string="Frais de scolarité", currency_field='currency_id',
+                                  groups='school_base.group_school_admin',
+                                  help="Montant appliqué par défaut aux nouveaux étudiants de cette promotion.")
 
     _sql_constraints = [
         ('name_uniq', 'unique(name)', "Cette promotion existe déjà."),
@@ -90,6 +122,23 @@ class SchoolStudent(models.Model):
                                      "(le Wi-Fi ne fait qu'un seul routeur vers Internet). Ce champ ne peut "
                                      "donc pas servir à distinguer deux étudiants entre eux.")
 
+    # Scolarité : visible uniquement par l'administration (données sensibles)
+    currency_id = fields.Many2one('res.currency', default=lambda self: self.env.company.currency_id)
+    fees_due = fields.Monetary(string="Frais dus", currency_field='currency_id',
+                               groups='school_base.group_school_admin')
+    fees_exempt = fields.Boolean(string="Dispensé / accord spécial", groups='school_base.group_school_admin',
+                                 help="Cochez si l'étudiant est exonéré ou bénéficie d'un arrangement particulier : "
+                                      "il n'est alors jamais signalé ni bloqué pour impayé.")
+    payment_ids = fields.One2many('school.payment', 'student_id', string="Paiements",
+                                  groups='school_base.group_school_admin')
+    fees_paid = fields.Monetary(compute='_compute_payment', store=True, string="Déjà payé",
+                                currency_field='currency_id', groups='school_base.group_school_admin')
+    fees_balance = fields.Monetary(compute='_compute_payment', store=True, string="Reste à payer",
+                                   currency_field='currency_id', groups='school_base.group_school_admin')
+    payment_status = fields.Selection([
+        ('paid', 'À jour'), ('partial', 'Paiement partiel'), ('unpaid', 'Impayé'), ('exempt', 'Dispensé'),
+    ], compute='_compute_payment', store=True, string="Situation", groups='school_base.group_school_admin')
+
     _sql_constraints = [
         ('identifiant_uniq', 'unique(identifiant)', "Cet identifiant est déjà utilisé par un autre étudiant."),
         ('matricule_uniq', 'unique(matricule)', "Ce matricule est déjà utilisé par un autre étudiant."),
@@ -100,8 +149,29 @@ class SchoolStudent(models.Model):
         for rec in self:
             rec.name = f"{rec.prenom or ''} {rec.nom or ''}".strip() or rec.identifiant or "Étudiant"
 
+    @api.depends('fees_due', 'fees_exempt', 'payment_ids.amount')
+    def _compute_payment(self):
+        for rec in self:
+            paid = sum(rec.payment_ids.mapped('amount'))
+            rec.fees_paid = paid
+            rec.fees_balance = max((rec.fees_due or 0.0) - paid, 0.0)
+            if rec.fees_exempt:
+                rec.payment_status = 'exempt'
+            elif (rec.fees_due or 0.0) <= 0 or paid >= rec.fees_due:
+                rec.payment_status = 'paid'
+            elif paid > 0:
+                rec.payment_status = 'partial'
+            else:
+                rec.payment_status = 'unpaid'
+
     @api.model_create_multi
     def create(self, vals_list):
+        # Frais par défaut : ceux de la promotion, si rien n'est précisé (utile à l'import Excel)
+        for vals in vals_list:
+            if vals.get('promotion_id') and not vals.get('fees_due') and (self.env.su or self.env.user.has_group('school_base.group_school_admin')):
+                fee = self.env['school.promotion'].browse(vals['promotion_id']).tuition_fee
+                if fee:
+                    vals['fees_due'] = fee
         students = super().create(vals_list)
         for student in students:
             if not student.user_id:
@@ -215,3 +285,33 @@ class SchoolTimetableSlot(models.Model):
                         raise ValidationError(
                             f"La salle « {rec.room_id.name} » est déjà occupée par « {other.course_id.name} » "
                             f"à ce moment-là (créneau « {other.name} »). Choisissez une autre salle ou un autre horaire.")
+
+
+class SchoolPayment(models.Model):
+    """Un versement de scolarité enregistré par la comptabilité/le secrétariat."""
+    _name = 'school.payment'
+    _description = 'Paiement de scolarité'
+    _order = 'date desc, id desc'
+
+    student_id = fields.Many2one('school.student', required=True, ondelete='cascade', string="Étudiant")
+    date = fields.Date(required=True, default=fields.Date.context_today)
+    currency_id = fields.Many2one('res.currency', default=lambda self: self.env.company.currency_id)
+    amount = fields.Monetary(required=True, string="Montant", currency_field='currency_id')
+    method = fields.Selection([
+        ('cash', 'Espèces'), ('mobile_money', 'Mobile Money'), ('bank', 'Virement / banque'), ('other', 'Autre'),
+    ], default='cash', string="Mode de paiement")
+    reference = fields.Char(string="N° de reçu / référence")
+    note = fields.Char()
+
+    @api.constrains('amount')
+    def _check_amount(self):
+        for rec in self:
+            if rec.amount <= 0:
+                raise ValidationError("Le montant d'un paiement doit être supérieur à zéro.")
+
+
+class ResCompany(models.Model):
+    _inherit = 'res.company'
+
+    school_logo = fields.Binary(string="Logo de l'établissement", attachment=True,
+                                help="Utilisé sur les QR codes, les affiches et les attestations.")

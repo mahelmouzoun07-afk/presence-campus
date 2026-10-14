@@ -1,3 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_school_attendance_session_user,school.attendance.session.user,model_school_attendance_session,base.group_user,1,1,1,0
-access_school_attendance_record_user,school.attendance.record.user,model_school_attendance_record,base.group_user,1,0,0,0
+access_school_attendance_session_admin,school.attendance.session.admin,model_school_attendance_session,school_base.group_school_admin,1,1,1,1
+access_school_attendance_session_teacher,school.attendance.session.teacher,model_school_attendance_session,school_base.group_school_teacher,1,0,0,0
+access_school_attendance_record_admin,school.attendance.record.admin,model_school_attendance_record,school_base.group_school_admin,1,1,1,1
+access_school_attendance_record_teacher,school.attendance.record.teacher,model_school_attendance_record,school_base.group_school_teacher,1,0,0,0
+access_school_attendance_task_admin,school.attendance.task.admin,model_school_attendance_task,school_base.group_school_admin,1,1,1,1
+access_school_qr_style_admin,school.qr.style.admin,model_school_qr_style,school_base.group_school_admin,1,1,1,1
+access_school_attendance_certificate_admin,school.attendance.certificate.admin,model_school_attendance_certificate,school_base.group_school_admin,1,1,1,1
+access_school_certificate_wizard,school.certificate.wizard,model_school_certificate_wizard,school_base.group_school_admin,1,1,1,1

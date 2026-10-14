@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_attendance_task_list" model="ir.ui.view">
+    <field name="name">school.attendance.task.list</field>
+    <field name="model">school.attendance.task</field>
+    <field name="arch" type="xml">
+      <list decoration-muted="state == 'done'" decoration-danger="task_type == 'absence_alert' and state == 'open'"
+            decoration-warning="state == 'open' and task_type != 'absence_alert'">
+        <header>
+          <button name="action_done" type="object" string="Marquer comme traité"/>
+        </header>
+        <field name="create_date" string="Reçu le"/>
+        <field name="task_type"/>
+        <field name="name"/>
+        <field name="course_id"/>
+        <field name="description"/>
+        <field name="state" widget="badge" decoration-warning="state == 'open'" decoration-success="state == 'done'"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_attendance_task_form" model="ir.ui.view">
+    <field name="name">school.attendance.task.form</field>
+    <field name="model">school.attendance.task</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_done" type="object" string="Marquer comme traité" class="btn-primary"
+                  invisible="state == 'done'"/>
+          <button name="action_authorize_new_device" type="object" string="Autoriser le nouvel appareil"
+                  invisible="task_type != 'device_attempt' or state == 'done'"
+                  confirm="Le prochain téléphone utilisé par cet étudiant sera enregistré comme son appareil. Continuer ?"/>
+          <button name="action_open_student" type="object" string="Ouvrir la fiche de l'étudiant"
+                  invisible="not student_id"/>
+          <button name="action_reopen" type="object" string="Rouvrir" invisible="state == 'open'"/>
+          <field name="state" widget="statusbar"/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name="task_type"/><field name="name"/><field name="student_id"/>
+              <field name="session_id"/><field name="record_id"/>
+            </group>
+            <group>
+              <field name="done_by" readonly="1"/><field name="done_date" readonly="1"/>
+              <field name="resolution_note"/>
+            </group>
+          </group>
+          <field name="description" placeholder="Détail…"/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_attendance_task_search" model="ir.ui.view">
+    <field name="name">school.attendance.task.search</field>
+    <field name="model">school.attendance.task</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name"/><field name="student_id"/><field name="course_id"/>
+        <filter string="À traiter" name="open" domain="[('state', '=', 'open')]"/>
+        <filter string="Traité" name="done" domain="[('state', '=', 'done')]"/>
+        <separator/>
+        <filter string="Absences répétées" name="f_absence" domain="[('task_type', '=', 'absence_alert')]"/>
+        <filter string="Appareils" name="f_device" domain="[('task_type', 'in', ('device_shared', 'device_attempt'))]"/>
+        <filter string="Entrées / sorties à vérifier" name="f_flagged"
+                domain="[('task_type', 'in', ('flagged_entry', 'flagged_exit', 'missing_checkout'))]"/>
+        <filter string="Scolarité" name="f_payment" domain="[('task_type', '=', 'payment')]"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Type" name="group_type" context="{'group_by': 'task_type'}"/>
+          <filter string="Cours" name="group_course" context="{'group_by': 'course_id'}"/>
+          <filter string="Étudiant" name="group_student" context="{'group_by': 'student_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_attendance_task" model="ir.actions.act_window">
+    <field name="name">À traiter</field>
+    <field name="res_model">school.attendance.task</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_attendance_task_search"/>
+    <field name="context">{'search_default_open': 1}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">Rien à traiter</p>
+      <p>Les situations qui demandent votre attention (absences répétées, appareil suspect, sortie non scannée,
+         scolarité impayée…) arrivent ici automatiquement.</p>
+    </field>
+  </record>
+
+  <menuitem id="menu_attendance_task" name="À traiter" parent="school_base.menu_school_root"
+            action="action_attendance_task" sequence="2" groups="school_base.group_school_admin"/>
+</odoo>

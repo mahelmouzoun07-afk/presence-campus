@@ -51,6 +51,6 @@
     <field name="context">{'group_by': 'weekday'}</field>
   </record>
 
-  <menuitem id="menu_school_room" name="Salles" parent="menu_school_root" action="action_school_room" sequence="30"/>
-  <menuitem id="menu_school_slot" name="Emploi du temps" parent="menu_school_root" action="action_school_slot" sequence="40"/>
+  <menuitem id="menu_school_room" name="Salles" parent="menu_school_root" action="action_school_room" sequence="30" groups="school_base.group_school_admin"/>
+  <menuitem id="menu_school_slot" name="Emploi du temps" parent="menu_school_root" action="action_school_slot" sequence="40" groups="school_base.group_school_admin"/>
 </odoo>

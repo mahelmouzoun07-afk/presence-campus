@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+  <record id="view_attendance_session_search" model="ir.ui.view">
+    <field name="name">school.attendance.session.search</field>
+    <field name="model">school.attendance.session</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="course_id"/>
+        <field name="room_id"/>
+        <field name="teacher_id"/>
+        <filter string="Aujourd'hui" name="today" domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+        <filter string="Cette semaine" name="this_week"
+                domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Cours" name="group_course" context="{'group_by': 'course_id'}"/>
+          <filter string="Salle" name="group_room" context="{'group_by': 'room_id'}"/>
+          <filter string="Enseignant" name="group_teacher" context="{'group_by': 'teacher_id'}"/>
+          <filter string="Jour" name="group_date" context="{'group_by': 'date:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
   <record id="view_attendance_session_list" model="ir.ui.view">
     <field name="name">school.attendance.session.list</field>
     <field name="model">school.attendance.session</field>
@@ -7,13 +29,54 @@
       <list>
         <field name="name"/>
         <field name="room_id"/>
+        <field name="teacher_id"/>
         <field name="time_start"/>
         <field name="time_end"/>
+        <field name="enrolled_count"/>
         <field name="present_count" string="Entrées"/>
         <field name="full_attendance_count" string="Entrées + sorties"/>
+        <field name="absent_count"/>
       </list>
     </field>
   </record>
+
+  <!-- Tableau de bord : une carte par séance, avec présents / absents en direct -->
+  <record id="view_attendance_session_kanban" model="ir.ui.view">
+    <field name="name">school.attendance.session.kanban</field>
+    <field name="model">school.attendance.session</field>
+    <field name="arch" type="xml">
+      <kanban create="0" default_order="time_start">
+        <templates>
+          <t t-name="card">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <strong class="fs-4"><field name="course_id"/></strong>
+              <field name="live_status" widget="badge"
+                     decoration-success="live_status in ('checkin', 'ongoing', 'checkout')"
+                     decoration-info="live_status == 'upcoming'" decoration-muted="live_status == 'done'"/>
+            </div>
+            <div class="text-muted mb-2">
+              <field name="room_id"/> — <field name="time_start" widget="datetime"/>
+            </div>
+            <div class="d-flex gap-4">
+              <div class="text-center">
+                <div class="fs-2 fw-bold text-success"><field name="present_count"/></div>
+                <div class="text-muted small">présents</div>
+              </div>
+              <div class="text-center">
+                <div class="fs-2 fw-bold text-danger"><field name="absent_count"/></div>
+                <div class="text-muted small">absents</div>
+              </div>
+              <div class="text-center">
+                <div class="fs-2 fw-bold"><field name="enrolled_count"/></div>
+                <div class="text-muted small">inscrits</div>
+              </div>
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
   <record id="view_attendance_session_form" model="ir.ui.view">
     <field name="name">school.attendance.session.form</field>
     <field name="model">school.attendance.session</field>
@@ -21,6 +84,7 @@
       <form>
         <header>
           <button name="action_start_now" type="object" string="Démarrer maintenant" class="btn-primary"/>
+          <field name="live_status" widget="statusbar" statusbar_visible="upcoming,checkin,ongoing,checkout,done"/>
         </header>
         <sheet>
           <div class="oe_button_box" name="button_box">
@@ -42,14 +106,50 @@
               <field name="checkin_window_minutes"/><field name="checkout_window_minutes"/>
             </group>
           </group>
+          <notebook>
+            <page string="Présents" name="present">
+              <field name="record_ids" readonly="1">
+                <list decoration-warning="state == 'flagged' or checkout_state == 'flagged'"
+                      decoration-danger="state == 'rejected'" decoration-success="attendance_complete">
+                  <field name="student_id"/>
+                  <field name="scan_datetime" string="Entrée"/><field name="state"/>
+                  <field name="checkout_scan_datetime" string="Sortie"/><field name="checkout_state"/>
+                  <field name="attendance_complete" column_invisible="1"/>
+                </list>
+              </field>
+            </page>
+            <page string="Absents (pas encore scannés)" name="absent">
+              <field name="absent_student_ids" readonly="1">
+                <list><field name="nom"/><field name="prenom"/><field name="matricule"/></list>
+              </field>
+            </page>
+          </notebook>
         </sheet>
       </form>
     </field>
   </record>
+
   <record id="action_attendance_session" model="ir.actions.act_window">
     <field name="name">Séances</field>
     <field name="res_model">school.attendance.session</field>
     <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_attendance_session_search"/>
   </record>
-  <menuitem id="menu_attendance_session" name="Séances" parent="school_base.menu_school_root" action="action_attendance_session" sequence="45"/>
+
+  <record id="action_session_dashboard" model="ir.actions.act_window">
+    <field name="name">Tableau de bord du jour</field>
+    <field name="res_model">school.attendance.session</field>
+    <field name="view_mode">kanban,list,form</field>
+    <field name="search_view_id" ref="view_attendance_session_search"/>
+    <field name="context">{'search_default_today': 1}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">Aucun cours aujourd'hui</p>
+      <p>Les séances du jour apparaissent ici automatiquement, avec le nombre de présents et d'absents en direct.</p>
+    </field>
+  </record>
+
+  <menuitem id="menu_attendance_dashboard" name="Tableau de bord" parent="school_base.menu_school_root"
+            action="action_session_dashboard" sequence="1" groups="school_base.group_school_teacher"/>
+  <menuitem id="menu_attendance_session" name="Séances" parent="school_base.menu_school_root"
+            action="action_attendance_session" sequence="45" groups="school_base.group_school_teacher"/>
 </odoo>

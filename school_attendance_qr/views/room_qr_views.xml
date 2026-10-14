@@ -1,20 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
   <record id="view_school_room_form_qr" model="ir.ui.view">
     <field name="name">school.room.form.qr</field>
     <field name="model">school.room</field>
     <field name="inherit_id" ref="school_base.view_school_room_form"/>
     <field name="arch" type="xml">
+      <xpath expr="//header" position="inside">
+        <button name="action_print_posters" type="object" string="Imprimer l'affiche (PDF)" class="btn-primary"
+                invisible="not id"/>
+        <button name="action_download_qr_png" type="object" string="Télécharger le QR (PNG)" invisible="not id"/>
+      </xpath>
       <sheet position="inside">
         <group string="QR de présence (permanent, à imprimer)">
-          <field name="scan_url" readonly="1"/>
-          <field name="qr_image" widget="image" options="{'size': [220, 220]}" readonly="1"/>
-          <p class="text-muted">
-            Ce code ne change jamais : colle l'adresse ci-dessus dans un générateur de QR
-            (par exemple EZQR) pour obtenir une image à imprimer et à coller dans la salle.
-          </p>
+          <group>
+            <field name="qr_style_id" placeholder="Style par défaut"/>
+            <field name="scan_url" readonly="1"/>
+            <p class="text-muted">
+              Ce code ne change jamais. Imprimez l'affiche (QR + nom de la salle + consignes) et collez-la dans
+              la salle : les couleurs et le logo se règlent dans Configuration &gt; Styles de QR.
+            </p>
+          </group>
+          <group>
+            <field name="qr_image" widget="image" nolabel="1" options="{'size': [260, 260]}" readonly="1"/>
+          </group>
         </group>
       </sheet>
+    </field>
+  </record>
+
+  <!-- Dans la liste : sélectionner plusieurs salles puis imprimer toutes leurs affiches d'un coup -->
+  <record id="view_school_room_list_qr" model="ir.ui.view">
+    <field name="name">school.room.list.qr</field>
+    <field name="model">school.room</field>
+    <field name="inherit_id" ref="school_base.view_school_room_list"/>
+    <field name="arch" type="xml">
+      <xpath expr="//list/field[1]" position="before">
+        <header>
+          <button name="action_print_posters" type="object" string="Imprimer les affiches (PDF)"/>
+        </header>
+      </xpath>
     </field>
   </record>
 </odoo>
