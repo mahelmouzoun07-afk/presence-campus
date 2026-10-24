@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="portal_timetable" name="Portail — Emploi du temps">
+    <t t-call="school_attendance_qr.portal_layout">
+      <t t-set="active_nav">timetable</t>
+
+      <div class="pp-topbar">
+        <div class="pp-h1">Emploi du temps</div>
+        <div style="color:#B9C0D4; font-size:13px; margin-top:2px;">Semaine en cours</div>
+      </div>
+
+      <div style="padding:16px 20px 24px; display:flex; flex-direction:column; gap:12px;">
+        <t t-if="not days">
+          <div class="pp-card" style="text-align:center; color:var(--muted);">Aucun cours cette semaine.</div>
+        </t>
+        <t t-foreach="days" t-as="day_group">
+          <div style="font-size:12px; font-weight:600; color:var(--muted); margin-top:6px;" t-out="fmt_date(day_group[0]).upper()"/>
+          <t t-foreach="day_group[1]" t-as="sess">
+            <t t-set="is_now" t-value="sess.is_within_checkin_window() or sess.is_within_checkout_window()"/>
+            <div class="pp-card" t-attf-style="display:flex; gap:14px; #{'border:2px solid var(--gold);' if is_now else ''}">
+              <div t-attf-style="width:3px; border-radius:2px; background:#{'var(--gold)' if is_now else 'var(--line)'};"/>
+              <div style="flex:1;">
+                <div t-attf-style="font-size:12px; font-weight:600; color:#{'var(--gold)' if is_now else 'var(--muted)'};">
+                  <t t-esc="sess.time_start.strftime('%Hh%M')"/> – <t t-esc="sess.time_end.strftime('%Hh%M')"/>
+                  <t t-if="is_now"> &#183; EN COURS</t>
+                </div>
+                <div style="font-weight:700; font-size:15.5px; margin-top:2px;" t-esc="sess.course_id.name"/>
+                <div style="color:var(--muted); font-size:13px; margin-top:2px;">
+                  <t t-esc="sess.room_id.name"/> &#183; <t t-esc="sess.teacher_id.name"/>
+                </div>
+              </div>
+            </div>
+          </t>
+        </t>
+      </div>
+    </t>
+  </template>
+</odoo>

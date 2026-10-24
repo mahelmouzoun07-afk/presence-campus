@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="portal_absences" name="Portail — Mes absences">
+    <t t-call="school_attendance_qr.portal_layout">
+      <t t-set="active_nav">profile</t>
+
+      <div class="pp-topbar" style="display:flex; align-items:center; gap:12px;">
+        <a href="/presence/profil" aria-label="Retour" style="color:#fff;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div class="pp-h1">Mes cours manqués</div>
+      </div>
+
+      <div style="padding:16px 20px 24px; display:flex; flex-direction:column; gap:10px;">
+        <t t-if="not missed">
+          <div class="pp-card" style="text-align:center; color:var(--green); font-weight:600;">Aucune absence — bravo !</div>
+        </t>
+        <t t-foreach="missed" t-as="sess">
+          <div class="pp-card" style="display:flex; gap:14px;">
+            <div style="width:3px; border-radius:2px; background:var(--brick);"/>
+            <div style="flex:1;">
+              <div style="font-size:12px; color:var(--muted); font-weight:600;" t-out="fmt_date(sess.date).capitalize()"/>
+              <div style="font-weight:700; font-size:15px; margin-top:2px;" t-esc="sess.course_id.name"/>
+              <div style="color:var(--muted); font-size:13px; margin-top:2px;">
+                <t t-esc="sess.room_id.name"/> &#183; <t t-esc="sess.time_start.strftime('%Hh%M')"/>
+              </div>
+            </div>
+          </div>
+        </t>
+      </div>
+    </t>
+  </template>
+</odoo>

@@ -1,11 +1,18 @@
 import io
+import json
 
 from odoo import fields, http
 from odoo.exceptions import AccessError
 from odoo.http import request, content_disposition
 
+from ..models import webauthn_helper as wa
+
 
 class AttendanceScanController(http.Controller):
+
+    def _current_student(self):
+        return request.env['school.student'].sudo().search(
+            [('user_id', '=', request.env.user.id)], limit=1)
 
     @http.route('/school/attendance/scan/<string:token>', type='http', auth='user', website=True)
     def scan_page(self, token, **kw):
@@ -23,8 +30,10 @@ class AttendanceScanController(http.Controller):
                 session, phase_hint = candidate, 'checkin'
             elif candidate and candidate.is_within_checkout_window():
                 session, phase_hint = candidate, 'checkout'
+        student = self._current_student()
         return request.render('school_attendance_qr.scan_page_template', {
             'token': token, 'room': room, 'session': session, 'phase_hint': phase_hint,
+            'needs_webauthn_setup': bool(student and not student.webauthn_credential_id),
         })
 
     @staticmethod
@@ -40,15 +49,51 @@ class AttendanceScanController(http.Controller):
             return xff.split(',')[0].strip()
         return request.httprequest.remote_addr
 
-    @http.route('/school/attendance/confirm', type='json', auth='user')
-    def confirm(self, token, latitude, longitude, device_fingerprint, accuracy=0):
-        """Appelé en JS après géolocalisation. L'étudiant est déduit de
-        l'utilisateur connecté, jamais transmis par le client."""
-        student = request.env['school.student'].sudo().search(
-            [('user_id', '=', request.env.user.id)], limit=1
-        )
+    # ------------------------------------------------------------ WebAuthn
+    @http.route('/school/attendance/webauthn/options', type='json', auth='user')
+    def webauthn_options(self):
+        """Avant de confirmer : le navigateur demande ici s'il doit
+        ENREGISTRER une nouvelle clé (premier scan jamais fait) ou
+        AUTHENTIFIER avec celle déjà enregistrée."""
+        student = self._current_student()
         if not student:
             return {'error': "Aucun profil étudiant associé à ce compte."}
+        company_name = request.env.company.name
+        if student.webauthn_credential_id:
+            return {'mode': 'authenticate',
+                   'options': json.loads(wa.build_authentication_options(
+                       request.session, request.httprequest, student))}
+        return {'mode': 'register',
+               'options': json.loads(wa.build_registration_options(
+                   request.session, request.httprequest, student, company_name))}
+
+    @http.route('/school/attendance/confirm', type='json', auth='user')
+    def confirm(self, token, latitude, longitude, device_fingerprint, webauthn_mode, webauthn_credential,
+               accuracy=0):
+        """Appelé en JS après géolocalisation ET vérification WebAuthn
+        (empreinte / Face ID / code PIN du téléphone). L'étudiant est déduit
+        de l'utilisateur connecté, jamais transmis par le client."""
+        student = self._current_student()
+        if not student:
+            return {'error': "Aucun profil étudiant associé à ce compte."}
+
+        credential_json = json.dumps(webauthn_credential)
+        if webauthn_mode == 'register':
+            result, error = wa.verify_registration(request.session, request.httprequest, credential_json)
+            if error:
+                return {'error': error}
+            student.sudo().write({
+                'webauthn_credential_id': result['credential_id'],
+                'webauthn_public_key': result['public_key'],
+                'webauthn_sign_count': result['sign_count'],
+                'webauthn_registered_at': fields.Datetime.now(),
+            })
+        elif webauthn_mode == 'authenticate':
+            ok, error = wa.verify_authentication(request.session, request.httprequest, student, credential_json)
+            if not ok:
+                return {'error': error}
+        else:
+            return {'error': "Vérification de l'appareil manquante."}
 
         try:
             return request.env['school.attendance.record'].sudo().register_scan(

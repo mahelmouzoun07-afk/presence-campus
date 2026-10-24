@@ -110,90 +110,11 @@
       </div>
 
       <t t-if="session">
+        <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
         <script type="text/javascript">
-          (function () {
-            function deviceFingerprint() {
-              var key = 'school_device_fingerprint';
-              var fp = localStorage.getItem(key);
-              if (!fp) { fp = 'dev-' + crypto.randomUUID(); localStorage.setItem(key, fp); }
-              return fp;
-            }
-
-            var seal = document.getElementById('ac_seal');
-            var result = document.getElementById('ac_result');
-            var resultSub = document.getElementById('ac_result_sub');
-
-            function showResult(cls, text, sub) {
-              result.className = 'ac-result ' + cls;
-              result.textContent = text;
-              result.style.display = 'block';
-              if (sub) { resultSub.textContent = sub; resultSub.style.display = 'block'; }
-            }
-
-            function stamp(color, iconPath) {
-              seal.style.setProperty('--state-color', color);
-              seal.innerHTML = '<svg class="ac-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="' + iconPath + '"/></svg>';
-              seal.classList.add('ac-stamped');
-            }
-
-            var ICON_CHECK = 'M4 12l5 5L20 6';
-            var ICON_WARN = 'M12 8v5M12 16.5h.01M10.3 3.9L2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z';
-            var ICON_CROSS = 'M6 6l12 12M18 6L6 18';
-
-            seal.addEventListener('click', function () {
-              if (seal.classList.contains('ac-busy') || seal.classList.contains('ac-stamped')) return;
-              seal.classList.add('ac-busy');
-              seal.querySelector('.ac-seal-label').textContent = '...';
-
-              if (!navigator.geolocation) {
-                seal.classList.remove('ac-busy');
-                showResult('ac-err', "Localisation indisponible sur cet appareil.");
-                return;
-              }
-
-              navigator.geolocation.getCurrentPosition(function (pos) {
-                fetch('/school/attendance/confirm', {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({
-                    jsonrpc: '2.0', method: 'call',
-                    params: {
-                      token: '<t t-esc="token"/>',
-                      latitude: pos.coords.latitude,
-                      longitude: pos.coords.longitude,
-                      accuracy: pos.coords.accuracy,
-                      device_fingerprint: deviceFingerprint(),
-                    },
-                  }),
-                }).then(function (r) { return r.json(); }).then(function (data) {
-                  var res = data.result || {};
-                  seal.classList.remove('ac-busy');
-                  var isCheckout = res.phase === 'checkout';
-                  var okLabel = isCheckout ? 'Sortie confirmée' : 'Entrée confirmée';
-                  var warnLabel = isCheckout ? 'Sortie enregistrée, à vérifier' : 'Entrée enregistrée, à vérifier';
-                  var errLabel = isCheckout ? 'Sortie refusée' : 'Entrée refusée';
-
-                  if (res.error) {
-                    stamp('var(--brick)', ICON_CROSS);
-                    showResult('ac-err', res.error);
-                  } else if (res.state === 'valid') {
-                    stamp('var(--green)', ICON_CHECK);
-                    showResult('ac-ok', okLabel);
-                  } else if (res.state === 'rejected') {
-                    stamp('var(--brick)', ICON_CROSS);
-                    showResult('ac-err', errLabel, res.flag_reason);
-                  } else {
-                    stamp('var(--amber)', ICON_WARN);
-                    showResult('ac-warn', warnLabel, res.flag_reason);
-                  }
-                });
-              }, function () {
-                seal.classList.remove('ac-busy');
-                seal.querySelector('.ac-seal-label').textContent = '<t t-esc="&quot;Confirmer ma sortie&quot; if phase_hint == &quot;checkout&quot; else &quot;Confirmer mon entrée&quot;"/>';
-                showResult('ac-err', "Autorise la localisation pour confirmer ta présence.");
-              }, {enableHighAccuracy: true, timeout: 15000});
-            });
-          })();
+          document.addEventListener('DOMContentLoaded', function () {
+            SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>');
+          });
         </script>
       </t>
     </t>
