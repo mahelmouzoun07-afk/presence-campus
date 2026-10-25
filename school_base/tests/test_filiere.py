@@ -5,9 +5,9 @@ class TestFiliere(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.info = self.env['school.filiere'].create({'name': 'Informatique de gestion', 'code': 'IG'})
-        self.gc = self.env['school.filiere'].create({'name': 'Génie civil', 'code': 'GC'})
-        self.l1 = self.env['school.promotion'].create({'name': 'L1 IG 2026', 'filiere_id': self.info.id})
+        self.info = self.env['school.filiere'].create({'name': 'Filière test IG', 'code': 'TIG'})
+        self.gc = self.env['school.filiere'].create({'name': 'Filière test GC', 'code': 'TGC'})
+        self.l1 = self.env['school.promotion'].create({'name': 'Promotion test TIG', 'filiere_id': self.info.id})
 
     def _student(self, **vals):
         base = {'nom': 'Kpadé', 'prenom': 'Jean', 'identifiant': 'jean.kpade', 'matricule': '100200'}

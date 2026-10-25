@@ -5,7 +5,7 @@ from odoo import fields, http
 from odoo.http import content_disposition, request
 
 from odoo.addons.school_attendance_qr.controllers.portal import _format_date_fr, portal_gate
-from odoo.addons.school_attendance_qr.models.helpers import icp_bool
+from odoo.addons.school_attendance_qr.models.helpers import icp_bool, local_time
 
 from ..models.event import EVENT_TYPES
 
@@ -70,10 +70,12 @@ class SchoolAcademicPortal(http.Controller):
         events = request.env['school.academic.event'].for_student(student, now - timedelta(days=7),
                                                                   now + timedelta(days=90))
         by_day = {}
-        for event in events:
-            by_day.setdefault(event.date_start.date(), []).append(event)
+        for event in events:  # regroupés par jour À L'HEURE DE L'ÉCOLE (pas en UTC)
+            day = fields.Date.to_date(local_time(request.env, event.date_start, '%Y-%m-%d'))
+            by_day.setdefault(day, []).append(event)
+        today = fields.Date.to_date(local_time(request.env, now, '%Y-%m-%d'))
         return request.render('school_academic.portal_calendar', {
-            'student': student, 'days': sorted(by_day.items()), 'today': now.date(), 'fmt_date': _format_date_fr,
+            'student': student, 'days': sorted(by_day.items()), 'today': today, 'fmt_date': _format_date_fr,
             'event_types': dict(EVENT_TYPES), 'active_nav': 'studies',
         })
 

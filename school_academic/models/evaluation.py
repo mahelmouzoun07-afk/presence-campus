@@ -80,13 +80,23 @@ class SchoolEvaluation(models.Model):
         start = self.time_start or fields.Datetime.to_datetime(self.date).replace(hour=8)
         return {
             'name': f"{dict(EVALUATION_TYPES)[self.evaluation_type]} : {self.course_id.name}",
-            'event_type': 'examen', 'importance': 'high' if self.evaluation_type in ('partiel', 'examen') else 'normal',
+            'event_type': 'devoir' if self.evaluation_type == 'devoir' else 'examen',
+            'importance': 'high' if self.evaluation_type in ('partiel', 'examen') else 'normal',
             'date_start': start, 'course_id': self.course_id.id, 'all_day': not self.time_start,
             'description': (f"{self.name}" + (f" — salle {self.room_id.name}" if self.room_id else '')),
         }
 
+    def _needs_event(self):
+        """Au calendrier : les partiels et examens, et toute évaluation dont
+        l'heure est annoncée à l'avance. Un devoir noté après coup n'y va pas."""
+        self.ensure_one()
+        return self.evaluation_type in ('partiel', 'examen') or bool(self.time_start)
+
     def _sync_event(self):
         for rec in self:
+            if not rec._needs_event():
+                rec.event_id.sudo().unlink()
+                continue
             if rec.event_id:
                 rec.event_id.sudo().write(rec._event_vals())
             else:

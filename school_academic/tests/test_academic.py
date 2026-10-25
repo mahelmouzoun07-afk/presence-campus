@@ -14,6 +14,7 @@ class AcademicCase(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env['school.academic.period'].search([]).write({'active': False})  # isole les tests des données existantes
         cls.period = cls.env['school.academic.period'].create({
             'name': 'Semestre test', 'date_from': date.today() - timedelta(days=60),
             'date_to': date.today() + timedelta(days=60)})

@@ -2,11 +2,10 @@
 avec l'école : rappels de cours, absences constatées, emploi du temps modifié,
 sécurité du compte, tâches « À traiter », synthèses)."""
 from datetime import timedelta
-from zoneinfo import ZoneInfo
 
 from odoo import api, fields, models
 
-from .helpers import icp, icp_bool, icp_int
+from .helpers import icp, icp_bool, icp_int, local_time
 from .task import DIRECTION_TASK_TYPES
 
 FRAUD_TASK_TYPES = ('gps_identical', 'scan_cluster', 'impossible_speed', 'device_shared', 'login_failures',
@@ -14,11 +13,7 @@ FRAUD_TASK_TYPES = ('gps_identical', 'scan_cluster', 'impossible_speed', 'device
 
 
 def _local_hhmm(env, dt):
-    try:
-        tz = ZoneInfo(icp(env, 'timezone', 'Africa/Porto-Novo'))
-    except Exception:
-        tz = ZoneInfo('Africa/Porto-Novo')
-    return dt.replace(tzinfo=ZoneInfo('UTC')).astimezone(tz).strftime('%Hh%M')
+    return local_time(env, dt)
 
 
 class SchoolSessionNotify(models.Model):

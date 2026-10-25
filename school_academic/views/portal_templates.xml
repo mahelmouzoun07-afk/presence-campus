@@ -37,7 +37,7 @@
               <div t-attf-style="width:6px; align-self:stretch; border-radius:3px; background:#{'var(--brick)' if ev.importance == 'high' else ('var(--amber)' if ev.importance == 'normal' else 'var(--line)')};"/>
               <div>
                 <div style="font-size:13.5px; font-weight:600;" t-esc="ev.name"/>
-                <div style="font-size:12px; color:var(--muted);"><t t-esc="event_types[ev.event_type]"/> · <t t-esc="fmt_date(ev.date_start.date())"/></div>
+                <div style="font-size:12px; color:var(--muted);"><t t-esc="event_types[ev.event_type]"/> · <t t-esc="fmt_date(datetime.date.fromisoformat(request.env['school.attendance.session'].fmt_local(ev.date_start, '%Y-%m-%d')))"/></div>
               </div>
             </div>
           </t>
@@ -105,7 +105,7 @@
                 <div style="flex:1;">
                   <div style="display:flex; justify-content:space-between; gap:8px;">
                     <span style="font-size:13.5px; font-weight:600;" t-esc="ev.name"/>
-                    <span t-if="not ev.all_day" style="font-size:12px; color:var(--muted);" t-esc="ev.date_start.strftime('%Hh%M')"/>
+                    <span t-if="not ev.all_day" style="font-size:12px; color:var(--muted);" t-esc="request.env['school.attendance.session'].fmt_local(ev.date_start, '%Hh%M')"/>
                   </div>
                   <div style="font-size:12px; color:var(--muted);">
                     <t t-esc="event_types[ev.event_type]"/><t t-if="ev.course_id"> · <t t-esc="ev.course_id.name"/></t>

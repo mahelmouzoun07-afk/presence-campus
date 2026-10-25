@@ -80,7 +80,7 @@
                 <span t-if="note.id in unread_ids" class="pp-badge" style="margin-right:4px;">●</span>
                 <t t-esc="note.title"/>
               </div>
-              <div style="font-size:11px; color:var(--muted); white-space:nowrap;" t-esc="note.create_date.strftime('%d/%m %Hh%M')"/>
+              <div style="font-size:11px; color:var(--muted); white-space:nowrap;" t-esc="request.env['school.attendance.session'].fmt_local(note.create_date, '%d/%m %Hh%M')"/>
             </div>
             <div t-if="note.body" style="font-size:12.5px; color:var(--muted); margin-top:3px;" t-esc="note.body"/>
           </a>

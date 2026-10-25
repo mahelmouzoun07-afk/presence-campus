@@ -6,12 +6,15 @@ Modules Odoo 18 pour la gestion de présence des étudiants dans les écoles/uni
 du Bénin : check-in/check-out par QR code + GPS, authentification WebAuthn (empreinte/
 Face ID), portail étudiant, suivi de scolarité, tableaux de bord enseignant/admin.
 
-Deux modules dans ce dossier :
-- `school_base/` — modèles de base (école, étudiant, enseignant, promotion, paiement)
-- `school_attendance_qr/` — présence QR+GPS, WebAuthn, portail étudiant, QR stylés,
-  attestations PDF, alertes d'absence, tâches "À traiter"
+Trois modules dans ce dossier :
+- `school_base/` — modèles de base (étudiant, enseignant, filière, promotion, cours,
+  salle, emploi du temps, paiement) ; groupes Enseignant / Administration / Direction
+- `school_attendance_qr/` — présence QR+GPS, WebAuthn, portail étudiant (PWA), hors
+  ligne, présence relayée, notifications push, sécurité (audit, détections), surveillance
+- `school_academic/` — examens et notes, moyennes, bulletins, calendrier, documents
 
-Version actuelle : **v11** (manifest 18.0.9.0.0).
+Version actuelle : **v12** (school_base 18.0.5.0.0, school_attendance_qr 18.0.10.0.0,
+school_academic 18.0.1.0.0). Branche Git : `v12/fonctionnalites-0-a-3` (v11 = `main`).
 
 ## Architecture d'hébergement retenue
 
@@ -56,38 +59,50 @@ cd ~/odoo && source venv/bin/activate
 - PostgreSQL : `sudo service postgresql start`
 - Installer un paquet Python dans le venv : toujours `python -m pip install <paquet>`,
   jamais `pip install` seul (peut pointer vers le mauvais interpréteur sur cette machine).
-- Après toute modif de code, relancer avec `-u school_base,school_attendance_qr`
+- Après toute modif de code, relancer avec `-u school_base,school_attendance_qr,school_academic`
   pour forcer la relecture des fichiers.
+- Tests automatiques (base séparée `presence_test`, jamais la vraie) :
+  `bash ~/odoo-custom-addons/outils/lancer-tests.sh` — 48 tests. Les tests ne doivent
+  pas dépendre des données déjà présentes dans `presence_test` (noms uniques).
+- Paquet Python supplémentaire : `pywebpush` (notifications push), installé dans le venv.
+- Infra (sauvegardes, surveillance, tunnel nommé, mode hybride) : `outils/INFRA.md`.
 - Tunnel de test rapide : `cloudflared tunnel --url http://localhost:8069`, puis mettre
   à jour `web.base.url` dans Paramètres → Technique → Paramètres système.
 
-## Fonctionnalités déjà codées (v11)
+## Fonctionnalités codées (v12)
 
-QR stylés + affiches PDF, dashboard enseignant temps réel, attestations PDF, boîte
-"À traiter" (alertes absence, appareils suspects, impayés), scolarité (`school.payment`,
-politique off/flag/block), WebAuthn sur la confirmation, portail étudiant complet
-(`/presence`, `/presence/emploi-du-temps`, `/presence/profil`, `/presence/mes-absences`).
+- v11 : QR stylés + affiches PDF, dashboard enseignant, attestations PDF, « À traiter »,
+  scolarité (politique off/flag/block), WebAuthn sur la confirmation, portail étudiant.
+- Correctif : après connexion, les étudiants arrivaient sur `/my` (portail Odoo
+  générique = « l'ancienne version ») → redirection vers `/presence` (`controllers/portal.py`).
+- Filières (étudiant ← promotion, cours, emploi du temps, statistiques).
+- Sécurité : mot de passe de départ (matricule) à changer obligatoirement ; 5 échecs de
+  connexion → compte signalé (compteur écrit APRÈS l'annulation de la transaction de
+  connexion, dans `_login`) ; journal d'audit `school.audit.log` chaîné SHA-256 (seule
+  exception « SQL brut » : verrou `pg_advisory_xact_lock`) ; détections GPS identique,
+  confirmations groupées, déplacement impossible ; 2FA personnel via `auth_totp.policy`.
+- Présence relayée (`/presence/relais`) : liste fermée « sans téléphone », saisie de
+  l'identité par l'étudiant, WebAuthn du responsable (clé sur `school.teacher` ou sur le
+  délégué), quota, comptage des têtes, contrôles aléatoires, niveaux de preuve A/B/C.
+- PWA : manifest/icône par école, service worker `/presence/sw.js` (portée `/presence`),
+  guide iPhone. Hors ligne : défis préchargés (`school.offline.challenge`), signature sur
+  le téléphone, synchronisation vérifiée côté serveur, preuve C « Validée hors ligne ».
+- Notifications : `school.notification.notify(users, titre, texte, url, catégorie)` +
+  Web Push (VAPID, sans Firebase) ; préférences par utilisateur ; sécurité toujours envoyée.
+- Études : évaluations/notes (`is_graded` distingue 0 et « non saisi »), moyennes selon
+  règles de l'école, rang, bulletins PDF, calendrier avec rappels, documents de cours.
+- Infra : `outils/sauvegarde.sh` (testé : sauvegarde + restauration), `/presence/sante`,
+  surveillance horaire (disque, sauvegardes, erreurs).
+- Heures du portail : toujours via `fmt_local` / `local_time` (Odoo stocke en UTC).
 
-## Pas encore codé (réflexion faite, rien implémenté)
+## Reste à faire (hors code ou à décider)
 
-- Étudiants sans téléphone : circuit "présence relayée" (responsable + son WebAuthn,
-  conservation des têtes, quota, audit aléatoire, niveaux de preuve A/B/C).
-- Filières.
-- PWA (manifest dynamique par école, service worker, mode hors ligne avec préchargement
-  de défis WebAuthn, distinction panne réelle vs hors réseau campus).
-- Notifications push (Firebase).
-- Examens et notes (règles de calcul de moyenne configurables par école).
-- Calendrier des événements académiques.
-- Documents d'études (upload/organisation par matière).
-- Interface du responsable (relais).
-- Renforts sécurité : 5 tentatives puis signalement, journal d'audit non modifiable,
-  détection vitesse impossible / GPS identique / scans en grappe, 2FA admin.
-
-## Problème ouvert au moment du transfert (25/10/2026)
-
-Après déploiement de la v11, le rendu (téléphone via tunnel) affichait toujours
-l'ancienne version. Pistes non encore vérifiées : ancien processus `odoo-bin` encore
-actif, mauvaise base, `__pycache__` périmé, cache navigateur.
+- Tester la PWA, le hors ligne et les push sur de vrais téléphones (Android + iPhone) via
+  le tunnel : le navigateur intégré de Claude Code n'accepte pas les service workers.
+- Acheter le domaine, créer le tunnel nommé, compte UptimeRobot, programmer la sauvegarde.
+- Décider qui relaie (enseignant, délégué ou les deux : réglage, « les deux » par défaut).
+- Conformité APDP (loi béninoise sur les données personnelles) : juridique.
+- Écrans admin/enseignant dédiés (au-delà des vues Odoo), piste Bluetooth, Odoo 20.
 
 ## Conventions de code
 

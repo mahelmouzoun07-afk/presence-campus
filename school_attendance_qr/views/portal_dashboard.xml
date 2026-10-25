@@ -32,7 +32,7 @@
             </div>
             <div class="pp-h1" style="font-size:20px; margin-top:6px;" t-esc="session.course_id.name"/>
             <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">
-              <t t-esc="session.room_id.name"/> &#183; <t t-esc="session.time_start.strftime('%Hh%M')"/> – <t t-esc="session.time_end.strftime('%Hh%M')"/>
+              <t t-esc="session.room_id.name"/> &#183; <t t-esc="request.env['school.attendance.session'].fmt_local(session.time_start, '%Hh%M')"/> – <t t-esc="request.env['school.attendance.session'].fmt_local(session.time_end, '%Hh%M')"/>
             </div>
 
             <div id="ac_seal" class="ac-seal">
@@ -69,7 +69,7 @@
             <div>
               <div style="font-size:11.5px; color:var(--muted); font-weight:600;">PROCHAIN COURS</div>
               <div style="font-size:14px; font-weight:600; margin-top:1px;">
-                <t t-esc="next_session.course_id.name"/> &#183; <t t-esc="next_session.room_id.name"/> &#183; <t t-esc="next_session.time_start.strftime('%Hh%M')"/>
+                <t t-esc="next_session.course_id.name"/> &#183; <t t-esc="next_session.room_id.name"/> &#183; <t t-esc="request.env['school.attendance.session'].fmt_local(next_session.time_start, '%Hh%M')"/>
               </div>
             </div>
           </div>

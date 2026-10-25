@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
-from .helpers import icp, icp_bool, icp_int
+from .helpers import icp, icp_bool, icp_int, local_time
 
 DEFAULT_TZ = 'Africa/Porto-Novo'
 
@@ -151,6 +151,11 @@ class SchoolAttendanceSession(models.Model):
                 rec.live_status = 'ongoing'
             else:
                 rec.live_status = 'done'
+
+    @api.model
+    def fmt_local(self, dt, fmt='%Hh%M'):
+        """Pour les gabarits du portail : heure locale de l'école."""
+        return local_time(self.env, dt, fmt)
 
     def action_view_records(self):
         self.ensure_one()

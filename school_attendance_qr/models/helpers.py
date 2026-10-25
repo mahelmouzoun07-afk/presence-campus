@@ -1,4 +1,6 @@
 """Petites fonctions partagées : lecture des réglages et adresse publique."""
+from zoneinfo import ZoneInfo
+
 from odoo.http import request
 
 
@@ -46,3 +48,15 @@ def client_ip():
     except Exception:
         pass
     return False
+
+
+def local_time(env, dt, fmt='%Hh%M'):
+    """Odoo enregistre les heures en UTC : on les affiche à l'heure de l'école
+    (Africa/Porto-Novo par défaut, réglable dans Paramètres > École)."""
+    if not dt:
+        return ''
+    try:
+        tz = ZoneInfo(icp(env, 'timezone', 'Africa/Porto-Novo'))
+    except Exception:
+        tz = ZoneInfo('Africa/Porto-Novo')
+    return dt.replace(tzinfo=ZoneInfo('UTC')).astimezone(tz).strftime(fmt)

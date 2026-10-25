@@ -21,7 +21,7 @@
               <div t-attf-style="width:3px; border-radius:2px; background:#{'var(--gold)' if is_now else 'var(--line)'};"/>
               <div style="flex:1;">
                 <div t-attf-style="font-size:12px; font-weight:600; color:#{'var(--gold)' if is_now else 'var(--muted)'};">
-                  <t t-esc="sess.time_start.strftime('%Hh%M')"/> – <t t-esc="sess.time_end.strftime('%Hh%M')"/>
+                  <t t-esc="request.env['school.attendance.session'].fmt_local(sess.time_start, '%Hh%M')"/> – <t t-esc="request.env['school.attendance.session'].fmt_local(sess.time_end, '%Hh%M')"/>
                   <t t-if="is_now"> &#183; EN COURS</t>
                 </div>
                 <div style="font-weight:700; font-size:15.5px; margin-top:2px;" t-esc="sess.course_id.name"/>

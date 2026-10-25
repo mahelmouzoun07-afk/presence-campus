@@ -210,8 +210,11 @@
   }
   function pushState() {
     if (!('serviceWorker' in navigator) || !('PushManager' in global)) return Promise.resolve('unsupported');
-    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); })
+    // Si le navigateur refuse le service worker, « ready » n'arrive jamais : on n'attend pas plus de 5 s
+    var timeout = new Promise(function (resolve) { setTimeout(function () { resolve('unsupported'); }, 5000); });
+    var state = navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); })
       .then(function (sub) { return sub ? 'on' : 'off'; });
+    return Promise.race([state, timeout]);
   }
 
   function cacheDocument(url) {
