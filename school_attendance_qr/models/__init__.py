@@ -9,5 +9,6 @@ from . import attendance
 from . import portal
 from . import task
 from . import security
+from . import relay
 from . import certificate
 from . import config_settings

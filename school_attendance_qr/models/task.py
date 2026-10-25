@@ -52,11 +52,13 @@ class SchoolAttendanceTask(models.Model):
         domain = [('task_type', '=', task_type), ('student_id', '=', student.id), ('state', '=', 'open')]
         if record:
             domain.append(('record_id', '=', record.id))
+        if session and not student:  # tâche liée à une séance, pas à un étudiant
+            domain.append(('session_id', '=', session.id))
         existing = self.sudo().search(domain, limit=1)
         if existing:
             return existing
         return self.sudo().create({
-            'task_type': task_type, 'student_id': student.id, 'name': name, 'description': description,
+            'task_type': task_type, 'student_id': student.id or False, 'name': name, 'description': description,
             'record_id': record.id if record else False,
             'session_id': (session or (record.session_id if record else self.env['school.attendance.session'])).id,
         })

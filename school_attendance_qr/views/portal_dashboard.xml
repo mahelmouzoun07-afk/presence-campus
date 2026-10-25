@@ -18,7 +18,14 @@
           <div style="color:var(--muted); font-size:13.5px; margin-top:2px;" t-esc="today_label"/>
         </div>
 
-        <t t-if="session">
+        <t t-if="session and student.no_phone">
+          <div class="pp-card" style="text-align:center; font-size:13.5px;">
+            <div class="pp-h1" style="font-size:18px;" t-esc="session.course_id.name"/>
+            <div style="color:var(--muted); margin-top:6px;">Votre présence est confirmée par le responsable du cours :
+              présentez-vous à lui avec votre matricule et votre identifiant.</div>
+          </div>
+        </t>
+        <t t-elif="session">
           <div class="pp-card" style="text-align:center;">
             <div style="color:var(--gold); font-size:12px; font-weight:600; letter-spacing:.03em;">
               <t t-esc="'SORTIE À CONFIRMER' if phase_hint == 'checkout' else 'EN COURS MAINTENANT'"/>

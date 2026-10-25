@@ -86,12 +86,7 @@ class AttendanceScanController(http.Controller):
             result, error = wa.verify_registration(request.session, request.httprequest, credential_json)
             if error:
                 return {'error': error}
-            student.sudo().write({
-                'webauthn_credential_id': result['credential_id'],
-                'webauthn_public_key': result['public_key'],
-                'webauthn_sign_count': result['sign_count'],
-                'webauthn_registered_at': fields.Datetime.now(),
-            })
+            wa.store_registration(student, result)
         elif webauthn_mode == 'authenticate':
             ok, error = wa.verify_authentication(request.session, request.httprequest, student, credential_json)
             if not ok:

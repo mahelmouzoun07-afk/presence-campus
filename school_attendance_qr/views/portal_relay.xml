@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="portal_relay" name="Portail — Relais (étudiants sans téléphone)">
+    <t t-call="school_attendance_qr.portal_layout">
+      <div class="pp-topbar">
+        <div class="pp-h1">Présences relayées</div>
+        <div style="color:#B9C0D4; font-size:12.5px; margin-top:3px;">Étudiants sans téléphone utilisable</div>
+      </div>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <div class="pp-card" style="font-size:12.5px; color:var(--muted); line-height:1.5;">
+          L'étudiant saisit <b>lui-même</b> son matricule et son identifiant, puis vous validez avec
+          <b>votre</b> empreinte. <b>Chaque relais engage votre identité</b> et est enregistré avec votre
+          position et l'heure.
+        </div>
+
+        <t t-if="not sessions">
+          <div class="pp-card" style="text-align:center; padding:26px 18px; color:var(--muted);">
+            Aucune séance ouverte en ce moment pour laquelle vous pouvez relayer.
+          </div>
+        </t>
+
+        <t t-foreach="sessions" t-as="item">
+          <t t-set="session" t-value="item['session']"/>
+          <div class="pp-card" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="color:var(--gold); font-size:11.5px; font-weight:600;"
+                     t-esc="'SORTIE' if item['phase'] == 'checkout' else 'ENTRÉE'"/>
+                <div class="pp-h1" style="font-size:18px;" t-esc="session.course_id.name"/>
+                <div style="color:var(--muted); font-size:12.5px;"><t t-esc="session.room_id.name"/></div>
+              </div>
+              <div style="text-align:right; font-size:12px; color:var(--muted);">
+                <span class="rl-used" t-att-data-session="session.id" t-esc="item['used']"/> relayé(s)<br/>
+                sur <t t-esc="item['limit']"/> autorisé(s)
+              </div>
+            </div>
+
+            <t t-if="session.relay_blocked">
+              <p class="ac-result ac-err" style="margin:0;">Relais bloqués : comptage des têtes incohérent.</p>
+            </t>
+            <t t-elif="not item['students']">
+              <div style="font-size:13px; color:var(--muted);">Aucun étudiant sans téléphone à confirmer.</div>
+            </t>
+            <t t-foreach="item['students']" t-as="st">
+              <div class="rl-row" t-att-data-session="session.id" t-att-data-student="st.id"
+                   style="border-top:1px solid var(--line); padding-top:10px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                  <div style="font-size:14px; font-weight:600;" t-esc="st.name"/>
+                  <button type="button" class="rl-open btn btn-sm" style="border:1px solid var(--ink); border-radius:8px;">Confirmer</button>
+                </div>
+                <div class="rl-form" style="display:none; flex-direction:column; gap:8px; margin-top:10px;">
+                  <input name="matricule" class="form-control" placeholder="Matricule (saisi par l'étudiant)" autocomplete="off" inputmode="numeric"/>
+                  <input name="identifiant" class="form-control" placeholder="Identifiant (saisi par l'étudiant)" autocomplete="off" autocapitalize="none"/>
+                  <button type="button" class="rl-submit btn" style="background:var(--ink); color:#fff; border-radius:10px; font-weight:600;">
+                    Valider avec mon empreinte
+                  </button>
+                </div>
+                <p class="rl-msg ac-result" style="display:none; font-size:13px;"/>
+              </div>
+            </t>
+
+            <div class="rl-count" t-att-data-session="session.id"
+                 style="border-top:1px solid var(--line); padding-top:12px; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size:12.5px; font-weight:600;">Fin de séance : nombre de personnes comptées dans la salle</div>
+              <div style="display:flex; gap:8px;">
+                <input name="headcount" type="number" min="0" class="form-control" t-att-value="session.headcount_declared or ''"/>
+                <button type="button" class="rl-count-submit btn" style="border:1px solid var(--ink); border-radius:8px;">Enregistrer</button>
+              </div>
+              <p class="rl-count-msg ac-result" style="display:none; font-size:13px;"/>
+            </div>
+          </div>
+        </t>
+
+        <a t-if="holder._name == 'school.student'" href="/presence" style="text-align:center; font-size:13px; color:var(--muted);">Retour à l'accueil</a>
+        <a t-else="" href="/odoo" style="text-align:center; font-size:13px; color:var(--muted);">Retour à l'espace enseignant</a>
+      </div>
+      <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
+      <script type="text/javascript" src="/school_attendance_qr/static/src/js/relay.js"></script>
+    </t>
+  </template>
+
+  <template id="portal_relay_denied" name="Portail — Relais non autorisé">
+    <t t-call="school_attendance_qr.portal_layout">
+      <div class="pp-topbar"><div class="pp-h1">Présences relayées</div></div>
+      <div style="padding:22px 20px;">
+        <div class="pp-card" style="text-align:center; color:var(--muted);">
+          Seuls les responsables désignés (enseignant du cours ou délégué) peuvent relayer des présences.
+        </div>
+      </div>
+    </t>
+  </template>
+</odoo>

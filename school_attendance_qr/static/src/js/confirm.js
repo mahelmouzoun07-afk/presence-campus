@@ -37,11 +37,40 @@
    * la clé déjà enregistrée. Renvoie {mode, credential} prêt à transmettre
    * au serveur, ou lève une erreur si l'étudiant annule / le téléphone ne
    * supporte pas WebAuthn. */
-  function runWebAuthnCeremony() {
-    if (!window.PublicKeyCredential) {
-      return Promise.reject(new Error("Cet appareil ne prend pas en charge la vérification sécurisée (WebAuthn)."));
+  var NO_LOCK_MESSAGE = "Votre téléphone n'a pas encore de code, de schéma ou d'empreinte configuré. " +
+    "Pour confirmer votre présence en toute sécurité, activez un verrouillage de l'écran, puis réessayez : " +
+    "Android : Paramètres > Sécurité > Verrouillage de l'écran. iPhone : Réglages > Face ID et code. " +
+    "Si votre téléphone est trop ancien pour cela, signalez-le au secrétariat.";
+  var UNSUPPORTED_MESSAGE = "Ce téléphone ne prend pas en charge la vérification sécurisée (trop ancien ou navigateur " +
+    "non compatible). Essayez avec Chrome ou Safari à jour ; sinon, signalez-le au secrétariat : votre présence " +
+    "sera confirmée par le responsable.";
+
+  /* Traduit les erreurs techniques du navigateur en consignes claires. */
+  function explainWebAuthnError(err) {
+    var name = err && err.name;
+    if (name === 'NotAllowedError') {
+      return new Error("Vérification annulée ou refusée par votre téléphone. Si aucun code ni empreinte n'est " +
+        "configuré sur ce téléphone : " + NO_LOCK_MESSAGE);
     }
-    return rpcCall('/school/attendance/webauthn/options', {}).then(function (res) {
+    if (name === 'NotSupportedError' || name === 'SecurityError') return new Error(UNSUPPORTED_MESSAGE);
+    if (name === 'InvalidStateError') return new Error("Ce téléphone est déjà enregistré. Réessayez.");
+    return err instanceof Error ? err : new Error(String(err));
+  }
+
+  /* Vérifie AVANT la cérémonie que le téléphone sait demander un code ou une
+   * empreinte : sinon on explique tout de suite quoi faire. */
+  function checkDeviceLock() {
+    if (!window.PublicKeyCredential) return Promise.reject(new Error(UNSUPPORTED_MESSAGE));
+    if (!PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return Promise.resolve();
+    return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function (ok) {
+      if (!ok) throw new Error(NO_LOCK_MESSAGE);
+    }, function () { /* information indisponible : on tente quand même */ });
+  }
+
+  function runWebAuthnCeremony(optionsUrl) {
+    return checkDeviceLock().then(function () {
+      return rpcCall(optionsUrl || '/school/attendance/webauthn/options', {});
+    }).then(function (res) {
       if (!res || res.error) throw new Error((res && res.error) || "Impossible de préparer la vérification.");
       var o = res.options;
       if (res.mode === 'register') {
@@ -60,7 +89,7 @@
               attestationObject: bufferToB64url(cred.response.attestationObject),
             },
           } };
-        });
+        }, function (err) { throw explainWebAuthnError(err); });
       }
       var publicKeyReq = Object.assign({}, o, {
         challenge: b64urlToBuffer(o.challenge),
@@ -77,7 +106,7 @@
             signature: bufferToB64url(cred.response.signature),
           },
         } };
-      });
+      }, function (err) { throw explainWebAuthnError(err); });
     });
   }
 
@@ -144,5 +173,9 @@
     });
   }
 
-  global.SchoolAttendance = { initConfirmWidget: initConfirmWidget };
+  global.SchoolAttendance = {
+    initConfirmWidget: initConfirmWidget, runWebAuthnCeremony: runWebAuthnCeremony, rpcCall: rpcCall,
+    b64urlToBuffer: b64urlToBuffer, bufferToB64url: bufferToB64url, deviceFingerprint: deviceFingerprint,
+    explainWebAuthnError: explainWebAuthnError,
+  };
 })(window);

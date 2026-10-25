@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Fiche étudiant : sans téléphone / délégué -->
+  <record id="view_school_student_form_relay" model="ir.ui.view">
+    <field name="name">school.student.form.relay</field>
+    <field name="model">school.student</field>
+    <field name="inherit_id" ref="school_base.view_school_student_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='filiere_id']" position="after">
+        <field name="no_phone"/>
+        <field name="is_delegate"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Fiche enseignant : clé d'appareil pour les relais -->
+  <record id="view_school_teacher_form_relay" model="ir.ui.view">
+    <field name="name">school.teacher.form.relay</field>
+    <field name="model">school.teacher</field>
+    <field name="inherit_id" ref="school_base.view_school_teacher_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//header" position="inside">
+        <button name="action_reset_webauthn" type="object" string="Réinitialiser la clé d'appareil"
+                groups="school_base.group_school_admin" invisible="not webauthn_registered_at"
+                confirm="L'enseignant devra réenregistrer son empreinte à son prochain relais. Continuer ?"/>
+      </xpath>
+      <xpath expr="//field[@name='user_id']" position="after">
+        <field name="webauthn_registered_at"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Présences : niveau de preuve visible partout -->
+  <record id="view_attendance_record_list_proof" model="ir.ui.view">
+    <field name="name">school.attendance.record.list.proof</field>
+    <field name="model">school.attendance.record</field>
+    <field name="inherit_id" ref="view_attendance_record_list"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='student_id']" position="after">
+        <field name="proof_level" widget="badge" decoration-success="proof_level == 'A'"
+               decoration-info="proof_level == 'B'" decoration-warning="proof_level == 'C'"/>
+        <field name="relay_label" optional="hide"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_attendance_record_search_proof" model="ir.ui.view">
+    <field name="name">school.attendance.record.search.proof</field>
+    <field name="model">school.attendance.record</field>
+    <field name="inherit_id" ref="view_attendance_record_search"/>
+    <field name="arch" type="xml">
+      <xpath expr="//filter[@name='rejected']" position="after">
+        <filter string="Relayées" name="relayed" domain="[('proof_level', '=', 'B')]"/>
+        <filter string="Validées hors ligne" name="offline" domain="[('proof_level', '=', 'C')]"/>
+      </xpath>
+      <xpath expr="//filter[@name='group_student']" position="before">
+        <filter string="Responsable du relais" name="group_relay" context="{'group_by': 'relayed_by_user_id'}"/>
+        <filter string="Niveau de preuve" name="group_proof" context="{'group_by': 'proof_level'}"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_attendance_session_form_relay" model="ir.ui.view">
+    <field name="name">school.attendance.session.form.relay</field>
+    <field name="model">school.attendance.session</field>
+    <field name="inherit_id" ref="view_attendance_session_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='record_ids']/list/field[@name='student_id']" position="after">
+        <field name="proof_level" widget="badge" decoration-success="proof_level == 'A'"
+               decoration-info="proof_level == 'B'" decoration-warning="proof_level == 'C'"/>
+      </xpath>
+      <xpath expr="//notebook" position="before">
+        <group string="Présences relayées" invisible="not relayed_count and not headcount_by">
+          <group>
+            <field name="relayed_count"/>
+            <field name="headcount_declared"/>
+            <field name="headcount_by"/>
+          </group>
+          <group>
+            <field name="headcount_mismatch"/>
+            <field name="relay_blocked"/>
+          </group>
+        </group>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="action_attendance_relayed" model="ir.actions.act_window">
+    <field name="name">Présences relayées</field>
+    <field name="res_model">school.attendance.record</field>
+    <field name="view_mode">list,pivot,graph</field>
+    <field name="search_view_id" ref="view_attendance_record_search"/>
+    <field name="domain">[('proof_level', '=', 'B')]</field>
+    <field name="context">{'search_default_group_relay': 1}</field>
+    <field name="help" type="html">
+      <p>Les présences confirmées par un responsable pour les étudiants sans téléphone, regroupées par responsable.</p>
+    </field>
+  </record>
+
+  <record id="action_open_relay_page" model="ir.actions.act_url">
+    <field name="name">Relayer des présences</field>
+    <field name="url">/presence/relais</field>
+    <field name="target">self</field>
+  </record>
+
+  <menuitem id="menu_attendance_relayed" name="Présences relayées (par responsable)"
+            parent="menu_attendance_stats_root" action="action_attendance_relayed" sequence="55"
+            groups="school_base.group_school_admin"/>
+  <menuitem id="menu_open_relay_page" name="Relayer des présences" parent="school_base.menu_school_root"
+            action="action_open_relay_page" sequence="2" groups="school_base.group_school_teacher"/>
+
+  <record id="ir_cron_missing_headcounts" model="ir.cron">
+    <field name="name">École : comptages des têtes manquants</field>
+    <field name="model_id" ref="model_school_attendance_session"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_missing_headcounts()</field>
+    <field name="interval_number">1</field>
+    <field name="interval_type">hours</field>
+    <field name="active" eval="True"/>
+  </record>
+
+</odoo>

@@ -39,6 +39,21 @@ class ResConfigSettings(models.TransientModel):
     school_require_2fa = fields.Boolean(
         string="Double authentification obligatoire pour le personnel",
         compute='_compute_school_require_2fa', inverse='_inverse_school_require_2fa')
+    school_relay_actor = fields.Selection([
+        ('teacher', "L'enseignant du cours"),
+        ('delegate', "Le délégué de la classe"),
+        ('both', "L'enseignant ou le délégué"),
+    ], string="Qui peut relayer la présence des étudiants sans téléphone", default='both',
+        config_parameter='school_attendance_qr.relay_actor')
+    school_relay_max_per_session = fields.Integer(
+        string="Relais maximum par séance et par responsable", default=3,
+        config_parameter='school_attendance_qr.relay_max_per_session')
+    school_relay_audit_rate = fields.Integer(
+        string="Contrôles aléatoires des relais (%)", default=20,
+        config_parameter='school_attendance_qr.relay_audit_rate')
+    school_relay_pattern_threshold = fields.Integer(
+        string="Signaler à partir de (relais du même étudiant par le même responsable, 30 jours)", default=5,
+        config_parameter='school_attendance_qr.relay_pattern_threshold')
     school_alert_send_email = fields.Boolean(
         string="Envoyer aussi un e-mail à l'étudiant",
         config_parameter='school_attendance_qr.alert_send_email')

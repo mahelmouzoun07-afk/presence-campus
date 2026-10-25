@@ -46,6 +46,18 @@
               </div>
             </setting>
           </block>
+          <block title="Étudiants sans téléphone (présence relayée)">
+            <setting string="Responsable du relais" help="Qui confirme, avec sa propre empreinte, la présence d'un étudiant marqué « sans téléphone utilisable ».">
+              <field name="school_relay_actor"/>
+            </setting>
+            <setting string="Garde-fous" help="Quota par séance, contrôles tirés au sort et détection des relais répétés.">
+              <div class="content-group">
+                <div class="row mt8"><label class="col-lg-7" string="Relais maximum par séance" for="school_relay_max_per_session"/><field name="school_relay_max_per_session"/></div>
+                <div class="row"><label class="col-lg-7" string="Contrôles aléatoires (%)" for="school_relay_audit_rate"/><field name="school_relay_audit_rate"/></div>
+                <div class="row"><label class="col-lg-7" string="Relais répétés : seuil sur 30 jours" for="school_relay_pattern_threshold"/><field name="school_relay_pattern_threshold"/></div>
+              </div>
+            </setting>
+          </block>
           <block title="Scolarité et présence">
             <setting string="Étudiants avec scolarité impayée"
                      help="Par défaut, rien ne change. « Signaler » enregistre la présence mais la place dans « À traiter ». « Bloquer » refuse la confirmation de présence : à réserver à une politique claire et connue des étudiants.">
