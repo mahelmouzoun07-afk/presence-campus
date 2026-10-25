@@ -1,4 +1,6 @@
 from odoo import fields, http
+from odoo.addons.portal.controllers.portal import CustomerPortal
+from odoo.addons.portal.controllers.web import Home
 from odoo.http import request
 
 _JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
@@ -10,6 +12,31 @@ def _format_date_fr(d):
     """Évite de dépendre de la locale du serveur (souvent en anglais sur un
     serveur fraîchement installé) pour afficher une date en français."""
     return f"{_JOURS[d.weekday()]} {d.day} {_MOIS[d.month - 1]}"
+
+
+def _is_student(uid):
+    return bool(uid) and bool(request.env['school.student'].sudo().search_count([('user_id', '=', uid)]))
+
+
+class SchoolHome(Home):
+    """Sans ça, Odoo envoie tout utilisateur portail sur son portail
+    générique /my après connexion : c'était « l'ancienne interface » que
+    voyaient les étudiants au lieu du portail de présence."""
+
+    def _login_redirect(self, uid, redirect=None):
+        if not redirect and _is_student(uid):
+            redirect = '/presence'
+        return super()._login_redirect(uid, redirect=redirect)
+
+
+class SchoolCustomerPortal(CustomerPortal):
+
+    @http.route()
+    def home(self, **kw):
+        # /, /odoo et /web renvoient les utilisateurs portail vers /my : on les rattrape ici
+        if _is_student(request.env.uid):
+            return request.redirect('/presence')
+        return super().home(**kw)
 
 
 class SchoolPortalController(http.Controller):
