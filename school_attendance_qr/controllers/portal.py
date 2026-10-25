@@ -72,7 +72,13 @@ class SchoolCustomerPortal(CustomerPortal):
                 result = self._update_password(old, new1, new2)
                 if result.get('errors'):
                     err = result['errors']['password']
-                    values['error'] = next(iter(err.values())) if isinstance(err, dict) else err
+                    # messages d'Odoo en anglais selon la langue du compte : on les reformule
+                    if isinstance(err, dict) and 'old' in err:
+                        values['error'] = "Le mot de passe actuel est incorrect : votre mot de passe n'a pas été changé."
+                    elif isinstance(err, dict) and 'new2' in err:
+                        values['error'] = "Les deux nouveaux mots de passe ne sont pas identiques."
+                    else:
+                        values['error'] = next(iter(err.values())) if isinstance(err, dict) else err
                 else:
                     student.write({'must_change_password': False})
                     request.env['school.audit.log'].log('password_changed', "Mot de passe personnel choisi.",
