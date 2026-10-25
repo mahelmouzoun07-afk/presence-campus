@@ -24,6 +24,34 @@ class ResConfigSettings(models.TransientModel):
     school_alert_rate = fields.Integer(
         string="Alerter sous ce taux de présence (%)", default=70,
         config_parameter='school_attendance_qr.alert_rate')
+    school_login_alert_attempts = fields.Integer(
+        string="Signaler après (échecs de connexion)", default=5,
+        config_parameter='school_attendance_qr.login_alert_attempts')
+    school_cluster_seconds = fields.Integer(
+        string="Fenêtre des confirmations groupées (s)", default=20,
+        config_parameter='school_attendance_qr.cluster_seconds')
+    school_cluster_min = fields.Integer(
+        string="Nombre de confirmations groupées suspect", default=3,
+        config_parameter='school_attendance_qr.cluster_min')
+    school_max_speed_kmh = fields.Integer(
+        string="Vitesse maximale crédible (km/h)", default=50,
+        config_parameter='school_attendance_qr.max_speed_kmh')
+    school_require_2fa = fields.Boolean(
+        string="Double authentification obligatoire pour le personnel",
+        compute='_compute_school_require_2fa', inverse='_inverse_school_require_2fa')
     school_alert_send_email = fields.Boolean(
         string="Envoyer aussi un e-mail à l'étudiant",
         config_parameter='school_attendance_qr.alert_send_email')
+
+    def _compute_school_require_2fa(self):
+        policy = self.env['ir.config_parameter'].sudo().get_param('auth_totp.policy')
+        for rec in self:
+            rec.school_require_2fa = policy in ('employee_required', 'all_required')
+
+    def _inverse_school_require_2fa(self):
+        # « employee_required » : tout le personnel (secrétariat, direction,
+        # enseignants) doit fournir un second facteur ; les étudiants (portail)
+        # ne sont pas concernés, leur preuve forte étant WebAuthn.
+        for rec in self:
+            self.env['ir.config_parameter'].sudo().set_param(
+                'auth_totp.policy', 'employee_required' if rec.school_require_2fa else False)

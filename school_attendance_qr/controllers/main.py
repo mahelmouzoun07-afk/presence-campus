@@ -31,6 +31,8 @@ class AttendanceScanController(http.Controller):
             elif candidate and candidate.is_within_checkout_window():
                 session, phase_hint = candidate, 'checkout'
         student = self._current_student()
+        if student and student.must_change_password:
+            return request.redirect('/presence/mot-de-passe')
         return request.render('school_attendance_qr.scan_page_template', {
             'token': token, 'room': room, 'session': session, 'phase_hint': phase_hint,
             'needs_webauthn_setup': bool(student and not student.webauthn_credential_id),
@@ -76,6 +78,8 @@ class AttendanceScanController(http.Controller):
         student = self._current_student()
         if not student:
             return {'error': "Aucun profil étudiant associé à ce compte."}
+        if student.must_change_password:
+            return {'error': "Choisissez d'abord votre mot de passe personnel (menu Profil)."}
 
         credential_json = json.dumps(webauthn_credential)
         if webauthn_mode == 'register':
@@ -106,6 +110,7 @@ class AttendanceScanController(http.Controller):
                 client_ip=self._get_client_ip(),
             )
         except Exception as e:
+            request.env['school.audit.log'].log('presence_refused', str(e), student=student)
             return {'error': str(e)}
 
     # --------------------------------------------------- impressions (admin)

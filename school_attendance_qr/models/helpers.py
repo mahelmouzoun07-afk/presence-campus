@@ -31,3 +31,18 @@ def get_base_url(env):
     except Exception:
         pass
     return (env['ir.config_parameter'].sudo().get_param('web.base.url') or '').rstrip('/')
+
+
+def client_ip():
+    """IP réelle du visiteur. Derrière un proxy (nginx, Cloudflare, tunnel...),
+    remote_addr donne l'IP du proxy : on lit donc X-Forwarded-For en priorité,
+    en ne gardant que le PREMIER maillon (le plus proche du visiteur)."""
+    try:
+        if request and request.httprequest:
+            xff = request.httprequest.headers.get('X-Forwarded-For')
+            if xff:
+                return xff.split(',')[0].strip()
+            return request.httprequest.remote_addr
+    except Exception:
+        pass
+    return False

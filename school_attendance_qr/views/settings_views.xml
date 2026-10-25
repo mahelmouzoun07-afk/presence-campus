@@ -30,6 +30,22 @@
               <field name="school_alert_send_email"/>
             </setting>
           </block>
+          <block title="Sécurité">
+            <setting string="Double authentification (personnel)"
+                     help="Le personnel devra saisir, en plus du mot de passe, un code de l'application Google Authenticator (ou un code reçu par e-mail s'il ne l'a pas activée). Configurez d'abord l'envoi d'e-mails.">
+              <field name="school_require_2fa"/>
+            </setting>
+            <setting string="Comptes signalés" help="Après ce nombre d'échecs de connexion d'affilée, l'étudiant est signalé à la direction dans « À traiter ».">
+              <field name="school_login_alert_attempts"/>
+            </setting>
+            <setting string="Détection des fraudes" help="Seuils des contrôles automatiques après chaque confirmation.">
+              <div class="content-group">
+                <div class="row mt8"><label class="col-lg-7" string="Confirmations groupées : fenêtre (s)" for="school_cluster_seconds"/><field name="school_cluster_seconds"/></div>
+                <div class="row"><label class="col-lg-7" string="Confirmations groupées : à partir de" for="school_cluster_min"/><field name="school_cluster_min"/></div>
+                <div class="row"><label class="col-lg-7" string="Vitesse maximale crédible (km/h)" for="school_max_speed_kmh"/><field name="school_max_speed_kmh"/></div>
+              </div>
+            </setting>
+          </block>
           <block title="Scolarité et présence">
             <setting string="Étudiants avec scolarité impayée"
                      help="Par défaut, rien ne change. « Signaler » enregistre la présence mais la place dans « À traiter ». « Bloquer » refuse la confirmation de présence : à réserver à une politique claire et connue des étudiants.">

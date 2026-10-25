@@ -7,3 +7,4 @@ access_school_attendance_task_admin,school.attendance.task.admin,model_school_at
 access_school_qr_style_admin,school.qr.style.admin,model_school_qr_style,school_base.group_school_admin,1,1,1,1
 access_school_attendance_certificate_admin,school.attendance.certificate.admin,model_school_attendance_certificate,school_base.group_school_admin,1,1,1,1
 access_school_certificate_wizard,school.certificate.wizard,model_school_certificate_wizard,school_base.group_school_admin,1,1,1,1
+access_school_audit_log_admin,school.audit.log.admin,model_school_audit_log,school_base.group_school_admin,1,0,0,0

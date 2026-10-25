@@ -21,6 +21,14 @@
     <field name="implied_ids" eval="[(4, ref('group_school_teacher'))]"/>
   </record>
 
+  <!-- Direction : reçoit en plus les signalements graves (comptes signalés,
+       fraudes répétées, comptages incohérents) -->
+  <record id="group_school_direction" model="res.groups">
+    <field name="name">Direction</field>
+    <field name="category_id" ref="module_category_school"/>
+    <field name="implied_ids" eval="[(4, ref('group_school_admin'))]"/>
+  </record>
+
   <!-- Les administrateurs Odoo sont automatiquement administrateurs de l'école -->
   <record id="base.group_system" model="res.groups">
     <field name="implied_ids" eval="[(4, ref('group_school_admin'))]"/>

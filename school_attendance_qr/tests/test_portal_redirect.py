@@ -15,7 +15,8 @@ class TestPortalRedirect(HttpCase):
         course = cls.env['school.course'].create({'name': 'Cours', 'teacher_id': teacher.id})
         cls.student = cls.env['school.student'].create({
             'nom': 'Test', 'prenom': 'Redirect', 'identifiant': 'redirect.test',
-            'matricule': 'mat-redirect-1', 'course_ids': [(6, 0, [course.id])]})
+            'matricule': 'mat-redirect-1', 'course_ids': [(6, 0, [course.id])],
+            'must_change_password': False})
 
     def test_my_redirects_student_to_presence(self):
         self.authenticate('redirect.test', 'mat-redirect-1')

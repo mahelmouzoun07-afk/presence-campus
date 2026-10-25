@@ -11,7 +11,19 @@ TASK_TYPES = [
     ('device_shared', 'Appareil partagé entre étudiants'),
     ('device_attempt', 'Tentative depuis un autre appareil'),
     ('payment', 'Scolarité impayée'),
+    ('login_failures', 'Compte signalé (connexions échouées)'),
+    ('gps_identical', 'Position GPS identique pour plusieurs étudiants'),
+    ('scan_cluster', 'Confirmations groupées'),
+    ('impossible_speed', 'Déplacement impossible entre deux confirmations'),
+    ('relay_audit', 'Contrôle aléatoire d\'une présence relayée'),
+    ('relay_pattern', 'Relais répétés pour un même étudiant'),
+    ('headcount', 'Comptage des têtes incohérent'),
+    ('offline_check', 'Présence hors ligne à vérifier'),
+    ('server', 'Alerte serveur'),
 ]
+
+# Types qui relèvent de la direction (pas seulement du secrétariat)
+DIRECTION_TASK_TYPES = ('login_failures', 'relay_pattern', 'headcount')
 
 
 class SchoolAttendanceTask(models.Model):

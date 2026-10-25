@@ -276,6 +276,8 @@ class SchoolAttendanceRecord(models.Model):
     flag_reason = fields.Char(readonly=True)
 
     checkout_scan_datetime = fields.Datetime(readonly=True)
+    checkout_latitude = fields.Float(digits=(10, 7), readonly=True)
+    checkout_longitude = fields.Float(digits=(10, 7), readonly=True)
     checkout_distance_meters = fields.Float(readonly=True)
     checkout_accuracy = fields.Float(readonly=True)
     checkout_state = fields.Selection([
@@ -437,6 +439,10 @@ class SchoolAttendanceRecord(models.Model):
             record = self.sudo().create(vals)
 
         record._check_cross_student_device_conflict('checkin')
+        record._run_fraud_detections('checkin')
+        self.env['school.audit.log'].log(
+            'presence', f"Entrée « {session.course_id.name} » : {dict(record._fields['state'].selection)[record.state]}"
+                        f"{' — ' + record.flag_reason if record.flag_reason else ''}", student=student, record=record)
         Task = self.env['school.attendance.task']
         if record.state == 'flagged':
             Task.create_unique('flagged_entry', student, f"Entrée à vérifier : {student.name}",
@@ -466,10 +472,17 @@ class SchoolAttendanceRecord(models.Model):
 
         record.write({
             'checkout_scan_datetime': fields.Datetime.now(),
+            'checkout_latitude': latitude, 'checkout_longitude': longitude,
             'checkout_distance_meters': distance, 'checkout_accuracy': accuracy,
             'checkout_state': state, 'checkout_flag_reason': reason,
         })
         record._check_cross_student_device_conflict('checkout')
+        record._run_fraud_detections('checkout')
+        self.env['school.audit.log'].log(
+            'presence', f"Sortie « {session.course_id.name} » : "
+                        f"{dict(record._fields['checkout_state'].selection)[record.checkout_state]}"
+                        f"{' — ' + record.checkout_flag_reason if record.checkout_flag_reason else ''}",
+            student=student, record=record)
         if record.checkout_state == 'flagged':
             self.env['school.attendance.task'].create_unique(
                 'flagged_exit', student, f"Sortie à vérifier : {student.name}",
@@ -478,6 +491,92 @@ class SchoolAttendanceRecord(models.Model):
             'phase': 'checkout', 'state': record.checkout_state, 'flag_reason': record.checkout_flag_reason,
             'course_name': session.course_id.name,
         }
+
+    # ------------------------------------------------- détections de fraude
+    def _flag(self, phase, reason):
+        """Passe l'entrée (ou la sortie) « à vérifier » en ajoutant le motif,
+        sans jamais rétrograder une présence déjà rejetée."""
+        for rec in self:
+            if phase == 'checkout':
+                if rec.checkout_state in ('valid', 'flagged') and reason not in (rec.checkout_flag_reason or ''):
+                    rec.write({'checkout_state': 'flagged',
+                               'checkout_flag_reason': self._join_reasons(rec.checkout_flag_reason, reason)})
+            elif rec.state in ('valid', 'flagged') and reason not in (rec.flag_reason or ''):
+                rec.write({'state': 'flagged', 'flag_reason': self._join_reasons(rec.flag_reason, reason)})
+
+    def _position(self, phase):
+        self.ensure_one()
+        if phase == 'checkout':
+            return self.checkout_latitude, self.checkout_longitude, self.checkout_scan_datetime
+        return self.latitude, self.longitude, self.scan_datetime
+
+    def _run_fraud_detections(self, phase='checkin'):
+        """Trois contrôles a posteriori, qui signalent sans bloquer :
+        - position GPS strictement identique à celle d'un autre étudiant (signe
+          typique d'une application de fausse position) ;
+        - confirmations groupées : plusieurs téléphones confirmés en quelques
+          secondes depuis le même point (une personne qui « pointe » pour d'autres) ;
+        - déplacement impossible : vitesse irréaliste depuis la confirmation
+          précédente du même étudiant."""
+        Task = self.env['school.attendance.task']
+        Audit = self.env['school.audit.log']
+        cluster_seconds = icp_int(self.env, 'cluster_seconds', 20)
+        cluster_min = icp_int(self.env, 'cluster_min', 3)
+        max_speed = icp_int(self.env, 'max_speed_kmh', 50) / 3.6
+        for rec in self:
+            lat, lon, when = rec._position(phase)
+            if not when or (not lat and not lon):
+                continue
+            same_session = self.sudo().search([('session_id', '=', rec.session_id.id), ('id', '!=', rec.id)])
+
+            twins = same_session.filtered(lambda o: any(
+                round(olat, 6) == round(lat, 6) and round(olon, 6) == round(lon, 6)
+                for olat, olon, _w in (o._position('checkin'), o._position('checkout')) if olat or olon))
+            if twins:
+                reason = "Position GPS identique à celle d'un autre étudiant"
+                (rec | twins)._flag(phase, reason)
+                for r in rec | twins:
+                    Task.create_unique('gps_identical', r.student_id, f"GPS identique : {r.student_id.name}",
+                                       f"Même position exacte que {', '.join(((rec | twins) - r).mapped('student_id.name'))}.",
+                                       record=r)
+                Audit.log('fraud', reason, student=rec.student_id, record=rec)
+
+            group = same_session.filtered(lambda o: (lambda p: p[2] and abs((p[2] - when).total_seconds()) <= cluster_seconds
+                                                     and _haversine_meters(lat, lon, p[0], p[1]) <= 3)(o._position(phase)))
+            if len(group) + 1 >= cluster_min:
+                reason = f"Confirmations groupées ({len(group) + 1} en {cluster_seconds} s au même endroit)"
+                (rec | group)._flag(phase, reason)
+                for r in rec | group:
+                    Task.create_unique('scan_cluster', r.student_id, f"Confirmations groupées : {r.student_id.name}",
+                                       reason, record=r)
+                Audit.log('fraud', reason, student=rec.student_id, record=rec)
+
+            previous = rec._previous_position(when)
+            if previous:
+                plat, plon, pwhen = previous
+                seconds = max((when - pwhen).total_seconds(), 1)
+                distance = _haversine_meters(plat, plon, lat, lon)
+                if distance > 200 and distance / seconds > max_speed:
+                    reason = (f"Déplacement impossible : {int(distance)} m en {int(seconds // 60)} min "
+                              f"depuis la confirmation précédente")
+                    rec._flag(phase, reason)
+                    Task.create_unique('impossible_speed', rec.student_id,
+                                       f"Déplacement impossible : {rec.student_id.name}", reason, record=rec)
+                    Audit.log('fraud', reason, student=rec.student_id, record=rec)
+
+    def _previous_position(self, before):
+        """Dernière position connue de l'étudiant (entrée ou sortie, tous cours
+        confondus) dans les 6 heures précédant `before`."""
+        self.ensure_one()
+        since = before - timedelta(hours=6)
+        candidates = []
+        for other in self.sudo().search([('student_id', '=', self.student_id.id),
+                                          '|', ('scan_datetime', '>=', since), ('checkout_scan_datetime', '>=', since)]):
+            for phase in ('checkin', 'checkout'):
+                lat, lon, when = other._position(phase)
+                if when and (lat or lon) and since <= when < before:
+                    candidates.append((lat, lon, when))
+        return max(candidates, key=lambda c: c[2]) if candidates else None
 
     def _check_cross_student_device_conflict(self, phase='checkin'):
         """Repère si l'appareil qui vient de scanner (entrée ou sortie) a
