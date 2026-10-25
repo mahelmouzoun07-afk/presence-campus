@@ -54,6 +54,14 @@ class ResConfigSettings(models.TransientModel):
     school_relay_pattern_threshold = fields.Integer(
         string="Signaler à partir de (relais du même étudiant par le même responsable, 30 jours)", default=5,
         config_parameter='school_attendance_qr.relay_pattern_threshold')
+    school_reminder_minutes = fields.Integer(
+        string="Rappel avant le cours (minutes)", default=10,
+        config_parameter='school_attendance_qr.reminder_minutes')
+    school_daily_summary = fields.Boolean(
+        string="Synthèse quotidienne au secrétariat", config_parameter='school_attendance_qr.daily_summary')
+    school_fees_deadline = fields.Date(
+        string="Date limite de paiement de la scolarité",
+        compute='_compute_school_fees_deadline', inverse='_inverse_school_fees_deadline')
     school_alert_send_email = fields.Boolean(
         string="Envoyer aussi un e-mail à l'étudiant",
         config_parameter='school_attendance_qr.alert_send_email')
@@ -70,3 +78,13 @@ class ResConfigSettings(models.TransientModel):
         for rec in self:
             self.env['ir.config_parameter'].sudo().set_param(
                 'auth_totp.policy', 'employee_required' if rec.school_require_2fa else False)
+
+    def _compute_school_fees_deadline(self):
+        value = self.env['ir.config_parameter'].sudo().get_param('school_attendance_qr.fees_deadline')
+        for rec in self:
+            rec.school_fees_deadline = fields.Date.to_date(value) if value else False
+
+    def _inverse_school_fees_deadline(self):
+        for rec in self:
+            self.env['ir.config_parameter'].sudo().set_param(
+                'school_attendance_qr.fees_deadline', fields.Date.to_string(rec.school_fees_deadline) or False)

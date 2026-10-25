@@ -150,9 +150,12 @@ class SchoolAttendanceRecordRelay(models.Model):
         Task = self.env['school.attendance.task']
         rate = icp_int(self.env, 'relay_audit_rate', 20)
         if random.randint(1, 100) <= rate:
-            Task.create_unique('relay_audit', student, f"Contrôle aléatoire : {student.name}",
-                               f"Présence relayée par {user.name} tirée au sort : vérifiez en personne que "
-                               "l'étudiant était bien en cours.", record=record)
+            task = Task.create_unique('relay_audit', student, f"Contrôle aléatoire : {student.name}",
+                                      f"Présence relayée par {user.name} tirée au sort : vérifiez en personne que "
+                                      "l'étudiant était bien en cours.", record=record)
+            teacher_user = record.session_id.teacher_id.user_id
+            if teacher_user and teacher_user != user and not task.assigned_user_id:
+                task.assigned_user_id = teacher_user
         threshold = icp_int(self.env, 'relay_pattern_threshold', 5)
         recent = self.sudo().search_count([
             ('student_id', '=', student.id), ('relayed_by_user_id', '=', user.id),

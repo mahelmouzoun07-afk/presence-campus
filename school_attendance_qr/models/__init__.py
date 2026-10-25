@@ -10,5 +10,8 @@ from . import portal
 from . import task
 from . import security
 from . import relay
+from . import notification
+from . import notify_events
+from . import offline
 from . import certificate
 from . import config_settings

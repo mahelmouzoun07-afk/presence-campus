@@ -4,6 +4,12 @@
   <template id="portal_layout" name="Portail étudiant — gabarit">
     <t t-call="portal.frontend_layout">
       <t t-set="head">
+        <link rel="manifest" href="/presence/manifest.webmanifest"/>
+        <meta name="theme-color" content="#14213D"/>
+        <meta name="apple-mobile-web-app-capable" content="yes"/>
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+        <meta name="apple-mobile-web-app-title" t-att-content="request.env.company.name"/>
+        <link rel="apple-touch-icon" href="/presence/icone/180.png"/>
         <link rel="preconnect" href="https://fonts.googleapis.com"/>
         <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
         <style>
@@ -40,10 +46,26 @@
           .ac-result{ font-size:1rem; font-weight:500; margin:10px 0 2px; text-align:center; }
           .ac-result-sub{ color:var(--muted); font-size:.85rem; margin:0; text-align:center; }
           .ac-result.ac-ok{ color:var(--green); } .ac-result.ac-warn{ color:var(--amber); } .ac-result.ac-err{ color:var(--brick); }
+          .pw-banner{ display:none; align-items:center; gap:8px; background:#5B6472; color:#fff; font-size:12.5px; padding:8px 16px; }
+          .pw-install{ display:none; align-items:center; justify-content:center; gap:8px; margin:12px 20px 0; padding:10px; border-radius:12px; border:1px dashed var(--ink); font-size:13px; font-weight:600; }
+          .pp-badge{ display:inline-block; min-width:16px; padding:0 4px; border-radius:8px; background:var(--brick); color:#fff; font-size:10px; line-height:16px; }
         </style>
       </t>
       <div class="pp-wrap">
+        <div id="pw_ctx" t-att-data-student="'1' if request.env['school.student'].sudo().search_count([('user_id', '=', request.env.uid)]) else '0'"/>
+        <div id="pw_banner" class="pw-banner"><span class="pw-text"/></div>
+        <div style="padding:0 20px;">
+          <button type="button" id="pw_offline_confirm" class="btn" style="display:none; width:100%; margin-top:12px; background:var(--ink); color:#fff; border-radius:12px; font-weight:600;">
+            Confirmer ma présence (hors ligne)
+          </button>
+          <p id="pw_offline_msg" class="ac-result" style="display:none; font-size:13px;"/>
+          <div id="pw_sync_result" style="display:none; margin-top:8px; font-size:13px;"/>
+        </div>
         <t t-out="0"/>
+        <a id="pw_install" class="pw-install" href="/presence/installer" t-if="active_nav">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          Installer l'application sur mon téléphone
+        </a>
         <t t-if="active_nav">
           <div class="pp-nav">
             <a href="/presence" t-attf-class="#{'active' if active_nav == 'home' else ''}">
@@ -54,6 +76,12 @@
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'timetable' else 'var(--muted)'}" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
               Emploi du temps
             </a>
+            <t t-call="school_attendance_qr.portal_nav_extra"/>
+            <a href="/presence/notifications" t-attf-class="#{'active' if active_nav == 'notifications' else ''}">
+              <t t-set="unread" t-value="request.env['school.notification'].sudo().search_count([('user_id', '=', request.env.uid), ('is_read', '=', False)])"/>
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'notifications' else 'var(--muted)'}" stroke-width="1.8"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+              Alertes <span t-if="unread" class="pp-badge" t-esc="unread"/>
+            </a>
             <a href="/presence/profil" t-attf-class="#{'active' if active_nav == 'profile' else ''}">
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'profile' else 'var(--muted)'}" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
               Profil
@@ -61,8 +89,13 @@
           </div>
         </t>
       </div>
+      <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
+      <script type="text/javascript" src="/school_attendance_qr/static/src/js/pwa.js"></script>
     </t>
   </template>
+
+  <!-- Point d'extension de la barre de navigation (ex. : module Études) -->
+  <template id="portal_nav_extra" name="Portail — liens de navigation supplémentaires"/>
 
   <template id="portal_no_student" name="Portail — pas de profil étudiant">
     <t t-call="portal.frontend_layout">

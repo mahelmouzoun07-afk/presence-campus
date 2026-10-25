@@ -74,7 +74,6 @@
         <a t-if="holder._name == 'school.student'" href="/presence" style="text-align:center; font-size:13px; color:var(--muted);">Retour à l'accueil</a>
         <a t-else="" href="/odoo" style="text-align:center; font-size:13px; color:var(--muted);">Retour à l'espace enseignant</a>
       </div>
-      <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
       <script type="text/javascript" src="/school_attendance_qr/static/src/js/relay.js"></script>
     </t>
   </template>

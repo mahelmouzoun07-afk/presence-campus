@@ -3,7 +3,7 @@
  * puis le responsable valide avec sa propre empreinte (WebAuthn). */
 (function () {
   'use strict';
-  var SA = window.SchoolAttendance;
+  var SA;  // confirm.js est chargé en fin de page : lu au démarrage
 
   function setMsg(el, cls, text) {
     el.className = 'ac-result ' + cls;
@@ -83,6 +83,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    SA = window.SchoolAttendance;
     document.querySelectorAll('.rl-row').forEach(initRow);
     document.querySelectorAll('.rl-count').forEach(initHeadcount);
   });

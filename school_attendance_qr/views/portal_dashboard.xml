@@ -42,7 +42,6 @@
             <p id="ac_result_sub" class="ac-result-sub" style="display:none;"/>
             <div style="color:var(--muted); font-size:11.5px; margin-top:8px;">Position et appareil vérifiés automatiquement.</div>
           </div>
-          <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
           <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function () {
               SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>');

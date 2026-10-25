@@ -58,6 +58,17 @@
               </div>
             </setting>
           </block>
+          <block title="Notifications">
+            <setting string="Rappel avant le cours" help="Les étudiants et l'enseignant reçoivent un rappel ce nombre de minutes avant le début.">
+              <field name="school_reminder_minutes"/>
+            </setting>
+            <setting string="Synthèse quotidienne" help="Chaque soir, le secrétariat reçoit le bilan du jour. La direction reçoit en plus une synthèse chaque lundi.">
+              <field name="school_daily_summary"/>
+            </setting>
+            <setting string="Date limite de paiement" help="Les étudiants qui doivent encore de l'argent reçoivent un rappel 14, 7, 3 et 1 jours avant.">
+              <field name="school_fees_deadline"/>
+            </setting>
+          </block>
           <block title="Scolarité et présence">
             <setting string="Étudiants avec scolarité impayée"
                      help="Par défaut, rien ne change. « Signaler » enregistre la présence mais la place dans « À traiter ». « Bloquer » refuse la confirmation de présence : à réserver à une politique claire et connue des étudiants.">

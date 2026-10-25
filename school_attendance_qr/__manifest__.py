@@ -4,7 +4,7 @@
     'summary': "Présence par QR (entrée + sortie), tableau de bord enseignant, alertes, attestations, scolarité",
     'category': 'Education',
     'depends': ['school_base', 'mail', 'portal', 'auth_totp_mail_enforce'],
-    'external_dependencies': {'python': ['webauthn']},
+    'external_dependencies': {'python': ['webauthn']},  # pywebpush : optionnel (notifications push)
     'data': [
         'security/ir.model.access.csv',
         'security/rules.xml',
@@ -17,6 +17,7 @@
         'views/portal_absences.xml',
         'views/portal_password.xml',
         'views/portal_relay.xml',
+        'views/portal_pwa.xml',
         'views/session_views.xml',
         'views/task_views.xml',
         'views/qr_style_views.xml',
@@ -28,6 +29,7 @@
         'views/relay_views.xml',
         'views/login_template.xml',
         'data/ir_cron_data.xml',
+        'data/notification_data.xml',
     ],
     'installable': True,
     'license': 'LGPL-3',

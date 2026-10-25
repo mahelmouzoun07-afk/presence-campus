@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="ir_cron_session_notifications" model="ir.cron">
+    <field name="name">École : rappels de cours, fin de fenêtre, absences constatées</field>
+    <field name="model_id" ref="model_school_attendance_session"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_session_notifications()</field>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">5</field>
+    <field name="interval_type">minutes</field>
+    <field name="active">True</field>
+  </record>
+
+  <record id="ir_cron_fees_reminders" model="ir.cron">
+    <field name="name">École : rappels de paiement de la scolarité</field>
+    <field name="model_id" ref="school_base.model_school_student"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_fees_reminders()</field>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">1</field>
+    <field name="interval_type">days</field>
+    <field name="nextcall" eval="(DateTime.now().replace(hour=7, minute=0, second=0) + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    <field name="active">True</field>
+  </record>
+
+  <record id="ir_cron_summaries" model="ir.cron">
+    <field name="name">École : synthèses (quotidienne et hebdomadaire)</field>
+    <field name="model_id" ref="school_base.model_school_student"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_summaries()</field>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">1</field>
+    <field name="interval_type">days</field>
+    <field name="nextcall" eval="(DateTime.now().replace(hour=17, minute=0, second=0) + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    <field name="active">True</field>
+  </record>
+</odoo>

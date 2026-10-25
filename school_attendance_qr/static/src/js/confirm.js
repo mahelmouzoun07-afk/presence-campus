@@ -139,6 +139,26 @@
       seal.classList.add('ac-busy');
       var label = seal.querySelector('.ac-seal-label'); if (label) label.textContent = '...';
 
+      var probe = global.SchoolPwa ? global.SchoolPwa.probe() : Promise.resolve('online');
+      probe.then(function (state) {
+        if (state === 'offline') {
+          global.SchoolPwa.confirmOffline().then(function () {
+            seal.classList.remove('ac-busy');
+            stamp('var(--muted)', ICON_CHECK);
+            showResult('ac-warn', 'Enregistrée hors ligne', "Le réseau de l'école ne répond pas. Votre confirmation " +
+              "sera envoyée et vérifiée dès le retour de la connexion (badge « Validée hors ligne »).");
+            global.SchoolPwa.updateBanner();
+          }).catch(function (err) {
+            seal.classList.remove('ac-busy'); resetLabel();
+            showResult('ac-err', err && err.message ? err.message : String(err));
+          });
+          return;
+        }
+        confirmOnline();
+      });
+    });
+
+    function confirmOnline() {
       if (!navigator.geolocation) {
         seal.classList.remove('ac-busy'); resetLabel();
         showResult('ac-err', "Localisation indisponible sur cet appareil.");
@@ -170,7 +190,7 @@
         seal.classList.remove('ac-busy'); resetLabel();
         showResult('ac-err', "Autorise la localisation pour confirmer ta présence.");
       }, { enableHighAccuracy: true, timeout: 15000 });
-    });
+    }
   }
 
   global.SchoolAttendance = {

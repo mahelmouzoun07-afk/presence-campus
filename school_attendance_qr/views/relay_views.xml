@@ -41,6 +41,8 @@
         <field name="proof_level" widget="badge" decoration-success="proof_level == 'A'"
                decoration-info="proof_level == 'B'" decoration-warning="proof_level == 'C'"/>
         <field name="relay_label" optional="hide"/>
+        <field name="offline_captured_at" optional="hide"/>
+        <field name="offline_synced_at" optional="hide"/>
       </xpath>
     </field>
   </record>

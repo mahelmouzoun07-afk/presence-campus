@@ -170,14 +170,16 @@ class SchoolAttendanceSession(models.Model):
                 raise AccessError(_("Vous ne pouvez démarrer que vos propres séances."))
         self.sudo().write({'time_start': fields.Datetime.now()})
 
-    def is_within_checkin_window(self):
+    def is_within_checkin_window(self, at=None):
+        """`at` : instant à tester (par défaut maintenant) — sert aux
+        confirmations hors ligne, vérifiées après coup à leur heure réelle."""
         self.ensure_one()
-        now = fields.Datetime.now()
+        now = at or fields.Datetime.now()
         return self.time_start <= now <= self.time_start + timedelta(minutes=self.checkin_window_minutes)
 
-    def is_within_checkout_window(self):
+    def is_within_checkout_window(self, at=None):
         self.ensure_one()
-        now = fields.Datetime.now()
+        now = at or fields.Datetime.now()
         end = self.time_end
         return (end - timedelta(minutes=self.checkout_window_minutes)) <= now <= (end + timedelta(minutes=self.checkout_window_minutes))
 
@@ -381,11 +383,11 @@ class SchoolAttendanceRecord(models.Model):
         if not student.device_fingerprint:
             student.write({'device_fingerprint': device_fingerprint, 'device_bound_at': fields.Datetime.now()})
 
-    def _find_conflicting_session(self, session, student):
+    def _find_conflicting_session(self, session, student, at=None):
         """Un étudiant programmé à un cours ne peut pas être « présent »
         ailleurs tant que ce cours n'est pas terminé. Renvoie la séance en
         conflit, ou rien si l'étudiant est libre à cet instant."""
-        now = fields.Datetime.now()
+        now = at or fields.Datetime.now()
         other_courses = student.course_ids - session.course_id
         if not other_courses:
             return False
