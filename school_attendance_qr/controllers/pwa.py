@@ -78,6 +78,18 @@ class SchoolPwaController(http.Controller):
     def install_guide(self):
         return request.render('school_attendance_qr.portal_install', {})
 
+    @http.route('/presence/sante', type='http', auth='none', sitemap=False, csrf=False, save_session=False)
+    def health(self):
+        """Adresse à surveiller par UptimeRobot : répond « ok » si Odoo et la base
+        répondent. Ne divulgue rien d'autre (pas de version, pas de chiffres)."""
+        try:
+            request.env.cr.execute("SELECT 1")
+            ok = True
+        except Exception:
+            ok = False
+        return request.make_response('ok' if ok else 'erreur', status=200 if ok else 503, headers=[
+            ('Content-Type', 'text/plain'), ('Cache-Control', 'no-store')])
+
     # ------------------------------------------------- connexion et hors ligne
     @http.route('/presence/ping', type='http', auth='public', sitemap=False, csrf=False)
     def ping(self):

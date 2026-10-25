@@ -1,0 +1,18 @@
+# Tunnel Cloudflare NOMMÉ : adresse fixe par école (contrairement au tunnel rapide
+# trycloudflare.com qui change à chaque redémarrage).
+# Copier en ~/.cloudflared/config.yml après « cloudflared tunnel create presence ».
+tunnel: presence
+credentials-file: /home/utilisateur/.cloudflared/REMPLACER-PAR-L-ID-DU-TUNNEL.json
+
+# La première règle qui correspond l'emporte : les plus précises d'abord.
+ingress:
+  # Notifications en temps réel d'Odoo (bus) : port 8072 quand « workers » > 0
+  - hostname: "*.presence.bj"
+    path: ^/websocket
+    service: http://localhost:8072
+  # Une ligne par école : le sous-domaine choisit la base (dbfilter = ^%d$ : iut.presence.bj -> base « iut »)
+  - hostname: iut.presence.bj
+    service: http://localhost:8069
+  - hostname: demo.presence.bj
+    service: http://localhost:8069
+  - service: http_status:404

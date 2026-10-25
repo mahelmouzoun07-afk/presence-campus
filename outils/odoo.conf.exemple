@@ -1,0 +1,18 @@
+; Configuration Odoo pour le serveur de production (une école ou plusieurs).
+; Copier en ~/odoo/odoo.conf puis lancer : ./odoo-bin -c odoo.conf
+[options]
+addons_path = addons,/home/utilisateur/odoo-custom-addons
+; Derrière le tunnel Cloudflare : indispensable pour les bonnes adresses (WebAuthn, liens)
+proxy_mode = True
+; Une base par école, choisie d'après le sous-domaine : iut.presence.bj -> base « iut »
+dbfilter = ^%d$
+; Ne jamais afficher la liste des bases ni permettre de les gérer depuis le web
+list_db = False
+admin_passwd = A_CHANGER_par_une_longue_phrase_secrete
+; Journal : nécessaire pour la surveillance des erreurs (Paramètres > École)
+logfile = /home/utilisateur/odoo/odoo.log
+log_level = info
+; Performances (petit serveur : 2 processus + cron)
+workers = 2
+max_cron_threads = 1
+limit_time_real = 120

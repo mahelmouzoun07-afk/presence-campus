@@ -62,6 +62,12 @@ class ResConfigSettings(models.TransientModel):
     school_fees_deadline = fields.Date(
         string="Date limite de paiement de la scolarité",
         compute='_compute_school_fees_deadline', inverse='_inverse_school_fees_deadline')
+    school_monitoring_disk_min_free_pct = fields.Integer(
+        string="Alerte disque sous (% libre)", default=15,
+        config_parameter='school_attendance_qr.monitoring_disk_min_free_pct')
+    school_monitoring_backups = fields.Boolean(
+        string="Surveiller les sauvegardes", default=True,
+        config_parameter='school_attendance_qr.monitoring_backups')
     school_alert_send_email = fields.Boolean(
         string="Envoyer aussi un e-mail à l'étudiant",
         config_parameter='school_attendance_qr.alert_send_email')

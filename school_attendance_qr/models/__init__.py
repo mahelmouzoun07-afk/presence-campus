@@ -13,5 +13,6 @@ from . import relay
 from . import notification
 from . import notify_events
 from . import offline
+from . import monitoring
 from . import certificate
 from . import config_settings

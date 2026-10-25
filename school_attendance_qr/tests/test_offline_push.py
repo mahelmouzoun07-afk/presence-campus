@@ -162,3 +162,28 @@ class TestPwaRoutes(HttpCase):
         self.assertIn('notificationclick', worker.text)
         self.assertTrue(self.url_open('/presence/ping').json()['ok'])
         self.assertEqual(self.url_open('/presence/hors-ligne').status_code, 200)
+
+
+class TestMonitoring(SchoolCase):
+
+    def test_missing_backup_and_full_disk_raise_alerts(self):
+        ICP = self.env['ir.config_parameter'].sudo()
+        ICP.set_param('school_attendance_qr.backup_status_file', '/tmp/aucune-sauvegarde-ici')
+        ICP.set_param('school_attendance_qr.monitoring_disk_min_free_pct', 101)  # force l'alerte disque
+        problems = self.env['school.server.health']._cron_health()
+        self.assertTrue(any('sauvegarde' in p for p in problems))
+        self.assertTrue(any('Disque' in p for p in problems))
+        tasks = self.env['school.attendance.task'].search([('task_type', '=', 'server'), ('state', '=', 'open')])
+        self.assertGreaterEqual(len(tasks), 2)
+        self.env['school.server.health']._cron_health()  # pas de doublon
+        self.assertEqual(self.env['school.attendance.task'].search_count(
+            [('task_type', '=', 'server'), ('state', '=', 'open')]), len(tasks))
+
+
+@tagged('post_install', '-at_install')
+class TestHealthRoute(HttpCase):
+
+    def test_health_endpoint(self):
+        res = self.url_open('/presence/sante')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.text, 'ok')
