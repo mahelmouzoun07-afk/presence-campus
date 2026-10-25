@@ -12,3 +12,5 @@ access_school_teacher_teacher,school.teacher.teacher,model_school_teacher,group_
 access_school_promotion_admin,school.promotion.admin,model_school_promotion,group_school_admin,1,1,1,1
 access_school_promotion_teacher,school.promotion.teacher,model_school_promotion,group_school_teacher,1,0,0,0
 access_school_payment_admin,school.payment.admin,model_school_payment,group_school_admin,1,1,1,1
+access_school_filiere_admin,school.filiere.admin,model_school_filiere,group_school_admin,1,1,1,1
+access_school_filiere_teacher,school.filiere.teacher,model_school_filiere,group_school_teacher,1,0,0,0

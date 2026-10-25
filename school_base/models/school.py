@@ -61,6 +61,30 @@ class SchoolTeacher(models.Model):
         }
 
 
+class SchoolFiliere(models.Model):
+    """Une filière (ex : 'Informatique de gestion'), au-dessus des promotions :
+    une filière regroupe plusieurs promotions (L1, L2, L3...)."""
+    _name = 'school.filiere'
+    _description = 'Filière'
+    _order = 'name'
+
+    name = fields.Char(required=True)
+    code = fields.Char(help="Abréviation courte, ex : IG, GC, MIA.")
+    active = fields.Boolean(default=True)
+    promotion_ids = fields.One2many('school.promotion', 'filiere_id', string="Promotions")
+    student_count = fields.Integer(compute='_compute_student_count', string="Étudiants")
+
+    _sql_constraints = [
+        ('name_uniq', 'unique(name)', "Cette filière existe déjà."),
+    ]
+
+    def _compute_student_count(self):
+        counts = dict(self.env['school.student']._read_group(
+            [('filiere_id', 'in', self.ids)], ['filiere_id'], ['__count']))
+        for rec in self:
+            rec.student_count = counts.get(rec, 0)
+
+
 class SchoolPromotion(models.Model):
     """Une promotion / cohorte (ex : 'L1 Info 2026-2027'), pour regrouper
     les étudiants et sortir des statistiques d'absence par promotion."""
@@ -69,6 +93,7 @@ class SchoolPromotion(models.Model):
     _order = 'name'
 
     name = fields.Char(required=True)
+    filiere_id = fields.Many2one('school.filiere', string="Filière", index=True)
     currency_id = fields.Many2one('res.currency', default=lambda self: self.env.company.currency_id)
     tuition_fee = fields.Monetary(string="Frais de scolarité", currency_field='currency_id',
                                   groups='school_base.group_school_admin',
@@ -85,6 +110,8 @@ class SchoolCourse(models.Model):
 
     name = fields.Char(required=True)
     teacher_id = fields.Many2one('school.teacher', string="Enseignant", required=True)
+    filiere_id = fields.Many2one('school.filiere', string="Filière",
+                                 help="Laissez vide pour un cours commun à plusieurs filières (tronc commun).")
     student_ids = fields.Many2many('school.student', string="Étudiants inscrits")
 
 
@@ -110,6 +137,9 @@ class SchoolStudent(models.Model):
 
     course_ids = fields.Many2many('school.course', string="Cours")
     promotion_id = fields.Many2one('school.promotion', string="Promotion")
+    filiere_id = fields.Many2one('school.filiere', string="Filière", compute='_compute_filiere_id',
+                                 store=True, readonly=False, index=True,
+                                 help="Reprise automatiquement de la promotion ; modifiable au cas par cas.")
     user_id = fields.Many2one('res.users', string="Compte portail", readonly=True,
                               help="Créé automatiquement à partir de l'identifiant et du matricule.")
 
@@ -148,6 +178,11 @@ class SchoolStudent(models.Model):
     def _compute_name(self):
         for rec in self:
             rec.name = f"{rec.prenom or ''} {rec.nom or ''}".strip() or rec.identifiant or "Étudiant"
+
+    @api.depends('promotion_id.filiere_id')
+    def _compute_filiere_id(self):
+        for rec in self:
+            rec.filiere_id = rec.promotion_id.filiere_id or rec.filiere_id
 
     @api.depends('fees_due', 'fees_exempt', 'payment_ids.amount')
     def _compute_payment(self):
@@ -232,9 +267,10 @@ class SchoolTimetableSlot(models.Model):
 
     name = fields.Char(compute='_compute_name')
     course_id = fields.Many2one('school.course', required=True)
+    filiere_id = fields.Many2one(related='course_id.filiere_id', store=True, string="Filière")
     room_id = fields.Many2one('school.room', required=True)
     teacher_id = fields.Many2one('school.teacher', string="Enseignant")
-    weekday = fields.Selection(WEEKDAYS, required=True, default='0')
+    weekday =fields.Selection(WEEKDAYS, required=True, default='0')
     start_time = fields.Float(required=True, default=8.0, help="Heure locale de début (ex : 8,5 = 8h30)")
     duration_minutes = fields.Integer(default=120)
     checkin_window_minutes = fields.Integer(default=15, string="Fenêtre d'entrée (min)",

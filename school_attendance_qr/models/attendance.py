@@ -259,6 +259,7 @@ class SchoolAttendanceRecord(models.Model):
     course_id = fields.Many2one('school.course', related='session_id.course_id', store=True, string="Cours")
     teacher_id = fields.Many2one('school.teacher', related='session_id.teacher_id', store=True, string="Enseignant")
     promotion_id = fields.Many2one('school.promotion', related='student_id.promotion_id', store=True, string="Promotion")
+    filiere_id = fields.Many2one('school.filiere', related='student_id.filiere_id', store=True, string="Filière")
     session_date = fields.Date(related='session_id.date', store=True, string="Date du cours")
     scan_datetime = fields.Datetime(default=fields.Datetime.now, readonly=True)
     device_fingerprint = fields.Char(required=True)
