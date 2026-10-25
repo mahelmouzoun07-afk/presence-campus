@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Page ouverte par l'élève après le scan du QR mural -->
+  <template id="scan_page_template" name="Scan de présence">
+    <t t-call="portal.frontend_layout">
+      <div class="container o_portal_my_home mt-4" style="max-width:480px;">
+        <h3 t-if="session">Confirmer ma présence : <t t-esc="session.name"/></h3>
+        <h3 t-else="">QR code invalide ou expiré</h3>
+
+        <div id="status_msg" class="alert d-none" role="alert"/>
+
+        <button id="confirm_btn" class="btn btn-primary btn-lg w-100 mt-3" t-if="session">
+          Confirmer ma présence
+        </button>
+      </div>
+
+      <script type="text/javascript">
+        function getDeviceFingerprint() {
+            // Identifiant persistant du navigateur, stocké côté client.
+            var key = 'school_device_fingerprint';
+            var fp = localStorage.getItem(key);
+            if (!fp) {
+                fp = 'dev-' + crypto.randomUUID();
+                localStorage.setItem(key, fp);
+            }
+            return fp;
+        }
+
+        var btn = document.getElementById('confirm_btn');
+        if (btn) btn.addEventListener('click', function () {
+            var msg = document.getElementById('status_msg');
+            if (!navigator.geolocation) {
+                msg.textContent = "Géolocalisation non disponible sur cet appareil.";
+                msg.className = 'alert';
+                msg.classList.add('alert-danger');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                fetch('/school/attendance/confirm', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'call',
+                        params: {
+                            token: '<t t-esc="token"/>',
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            device_fingerprint: getDeviceFingerprint(),
+                            accuracy: pos.coords.accuracy,
+                        },
+                    }),
+                }).then(r => r.json()).then(data => {
+                    var result = data.result || {};
+                    msg.className = 'alert';
+                    if (result.error) {
+                        msg.textContent = result.error;
+                        msg.classList.add('alert-danger');
+                    } else if (result.state === 'rejected') {
+                        msg.textContent = "Présence refusée : " + result.flag_reason + ". Rapprochez-vous de la salle puis réessayez.";
+                        msg.classList.add('alert-danger');
+                    } else if (result.state === 'valid') {
+                        msg.textContent = "Présence confirmée !";
+                        msg.classList.add('alert-success');
+                    } else {
+                        msg.textContent = "Présence enregistrée mais à vérifier : " + result.flag_reason;
+                        msg.classList.add('alert-warning');
+                    }
+                });
+            }, function () {
+                msg.textContent = "Merci d'autoriser la géolocalisation pour confirmer votre présence.";
+                msg.className = 'alert';
+                msg.classList.add('alert-danger');
+            }, {enableHighAccuracy: true, timeout: 15000});
+        });
+      </script>
+    </t>
+  </template>
+
+  <!-- Vue backend : liste des présences pour l'enseignant / le secrétariat -->
+  <record id="view_attendance_record_list" model="ir.ui.view">
+    <field name="name">school.attendance.record.list</field>
+    <field name="model">school.attendance.record</field>
+    <field name="arch" type="xml">
+      <list decoration-warning="state=='flagged'" decoration-danger="state=='rejected'">
+        <field name="session_id"/>
+        <field name="student_id"/>
+        <field name="scan_datetime"/>
+        <field name="distance_meters"/>
+        <field name="accuracy"/>
+        <field name="state"/>
+        <field name="flag_reason"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="action_attendance_record" model="ir.actions.act_window">
+    <field name="name">Présences (QR)</field>
+    <field name="res_model">school.attendance.record</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <menuitem id="menu_attendance_qr" name="Présence QR" action="action_attendance_record" sequence="20"/>
+
+</odoo>

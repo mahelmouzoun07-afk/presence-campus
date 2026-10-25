@@ -1,0 +1,9 @@
+lancement odoo et et le tunnel
+
+sudo service postgresql start
+
+cd ~/odoo && source venv/bin/activate
+
+./odoo-bin --addons-path=addons,$HOME/odoo-custom-addons -d mon_ecole --proxy-mode --no-database-list
+
+cloudflared tunnel --protocol http2 --url http://localhost:8069
