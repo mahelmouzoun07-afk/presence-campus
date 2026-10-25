@@ -119,7 +119,7 @@ class AttendanceScanController(http.Controller):
         self._check_admin()
         room = request.env['school.room'].browse(room_id)
         if not room.exists():
-            return request.not_found()
+            raise request.not_found()
         png = room._render_qr_png(box_size=20)
         headers = [('Content-Type', 'image/png'),
                    ('Content-Disposition', content_disposition(f"QR-{room.name}.png"))]
@@ -131,7 +131,7 @@ class AttendanceScanController(http.Controller):
         room_ids = [int(i) for i in ids.split(',') if i.strip().isdigit()]
         rooms = request.env['school.room'].browse(room_ids).exists()
         if not rooms:
-            return request.not_found()
+            raise request.not_found()
         pdf = rooms._render_posters_pdf()
         name = "Affiches-QR.pdf" if len(rooms) > 1 else f"Affiche-QR-{rooms.name}.pdf"
         headers = [('Content-Type', 'application/pdf'),

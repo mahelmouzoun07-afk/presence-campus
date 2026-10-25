@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="res_config_settings_view_form_academic" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.inherit.academic</field>
+    <field name="model">res.config.settings</field>
+    <field name="inherit_id" ref="school_attendance_qr.res_config_settings_view_form_school"/>
+    <field name="arch" type="xml">
+      <xpath expr="//app[@name='school_attendance_qr']" position="inside">
+        <block title="Notes et moyennes (règles de l'établissement)">
+          <setting string="Barème et note de passage" help="Toutes les notes sont ramenées à ce barème (ex. 15/40 devient 7,5/20).">
+            <div class="content-group">
+              <div class="row mt8"><label class="col-lg-6" string="Barème" for="school_grade_scale"/><field name="school_grade_scale"/></div>
+              <div class="row"><label class="col-lg-6" string="Note de passage" for="school_grade_pass_mark"/><field name="school_grade_pass_mark"/></div>
+              <div class="row"><label class="col-lg-6" string="Décimales" for="school_grade_rounding"/><field name="school_grade_rounding"/></div>
+            </div>
+          </setting>
+          <setting string="Calcul" help="Moyenne d'un cours : pondérée par le poids des évaluations. Moyenne générale : selon le choix ci-dessous.">
+            <div class="content-group">
+              <div class="mt8"><field name="school_grade_use_coefficients" widget="radio"/></div>
+              <div class="mt8"><field name="school_grade_absent_policy" widget="radio"/></div>
+            </div>
+          </setting>
+          <setting string="Bulletin dans l'application" help="L'étudiant peut télécharger lui-même son bulletin PDF.">
+            <field name="school_bulletin_portal"/>
+          </setting>
+          <setting string="Documents de cours" help="Taille maximale d'un fichier déposé (PDF ou image).">
+            <field name="school_document_max_mb"/>
+          </setting>
+        </block>
+      </xpath>
+    </field>
+  </record>
+</odoo>

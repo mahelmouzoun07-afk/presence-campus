@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_school_academic_period_admin,school.academic.period.admin,model_school_academic_period,school_base.group_school_admin,1,1,1,1
+access_school_academic_period_teacher,school.academic.period.teacher,model_school_academic_period,school_base.group_school_teacher,1,0,0,0
+access_school_evaluation_admin,school.evaluation.admin,model_school_evaluation,school_base.group_school_admin,1,1,1,1
+access_school_evaluation_teacher,school.evaluation.teacher,model_school_evaluation,school_base.group_school_teacher,1,1,1,1
+access_school_grade_admin,school.grade.admin,model_school_grade,school_base.group_school_admin,1,1,1,1
+access_school_grade_teacher,school.grade.teacher,model_school_grade,school_base.group_school_teacher,1,1,1,1
+access_school_academic_event_admin,school.academic.event.admin,model_school_academic_event,school_base.group_school_admin,1,1,1,1
+access_school_academic_event_teacher,school.academic.event.teacher,model_school_academic_event,school_base.group_school_teacher,1,1,1,1
+access_school_course_document_admin,school.course.document.admin,model_school_course_document,school_base.group_school_admin,1,1,1,1
+access_school_course_document_teacher,school.course.document.teacher,model_school_course_document,school_base.group_school_teacher,1,1,1,1
+access_school_bulletin_wizard_admin,school.bulletin.wizard.admin,model_school_bulletin_wizard,school_base.group_school_admin,1,1,1,1

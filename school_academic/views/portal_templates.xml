@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Lien « Études » dans la barre de navigation du portail -->
+  <template id="portal_nav_studies" inherit_id="school_attendance_qr.portal_nav_extra" name="Portail — lien Études">
+    <xpath expr="." position="inside">
+      <a href="/presence/etudes" t-attf-class="#{'active' if active_nav == 'studies' else ''}">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'studies' else 'var(--muted)'}" stroke-width="1.8"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M7 10v5c2.5 2 7.5 2 10 0v-5"/></svg>
+        Études
+      </a>
+    </xpath>
+  </template>
+
+  <template id="portal_studies" name="Portail — Études">
+    <t t-call="school_attendance_qr.portal_layout">
+      <div class="pp-topbar"><div class="pp-h1">Mes études</div></div>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <a href="/presence/notes" class="pp-card" style="text-align:center; padding:14px 8px;">
+            <div class="pp-h1" style="font-size:19px;" t-esc="general"/>
+            <div style="font-size:11.5px; color:var(--muted);">Moyenne /<t t-esc="'%g' % scale"/></div>
+          </a>
+          <a href="/presence/calendrier" class="pp-card" style="text-align:center; padding:14px 8px;">
+            <div class="pp-h1" style="font-size:19px;" t-esc="len(upcoming)"/>
+            <div style="font-size:11.5px; color:var(--muted);">À venir (14 j)</div>
+          </a>
+          <a href="/presence/documents" class="pp-card" style="text-align:center; padding:14px 8px;">
+            <div class="pp-h1" style="font-size:19px;" t-esc="doc_count"/>
+            <div style="font-size:11.5px; color:var(--muted);">Documents</div>
+          </a>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:600; color:var(--muted); margin:4px 0 8px 4px;">PROCHAINES ÉCHÉANCES</div>
+          <t t-if="not upcoming"><div class="pp-card" style="color:var(--muted); text-align:center;">Rien de prévu dans les 14 prochains jours.</div></t>
+          <t t-foreach="upcoming" t-as="ev">
+            <div class="pp-card" style="display:flex; gap:12px; align-items:center; padding:12px 14px; margin-bottom:8px;">
+              <div t-attf-style="width:6px; align-self:stretch; border-radius:3px; background:#{'var(--brick)' if ev.importance == 'high' else ('var(--amber)' if ev.importance == 'normal' else 'var(--line)')};"/>
+              <div>
+                <div style="font-size:13.5px; font-weight:600;" t-esc="ev.name"/>
+                <div style="font-size:12px; color:var(--muted);"><t t-esc="event_types[ev.event_type]"/> · <t t-esc="fmt_date(ev.date_start.date())"/></div>
+              </div>
+            </div>
+          </t>
+        </div>
+      </div>
+    </t>
+  </template>
+
+  <template id="portal_grades" name="Portail — Notes">
+    <t t-call="school_attendance_qr.portal_layout">
+      <div class="pp-topbar">
+        <div class="pp-h1">Mes notes</div>
+        <form t-if="periods" method="get" action="/presence/notes" style="margin-top:8px;">
+          <select name="period_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <t t-foreach="periods" t-as="p"><option t-att-value="p.id" t-att-selected="p == period" t-esc="p.name"/></t>
+          </select>
+        </form>
+      </div>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+        <div class="pp-card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:12px; color:var(--muted); font-weight:600;">MOYENNE GÉNÉRALE</div>
+            <div t-if="results['general'] is not None" style="font-size:12px;" t-attf-style="color:#{'var(--green)' if results['passed'] else 'var(--brick)'};">
+              <t t-esc="'Au-dessus' if results['passed'] else 'En dessous'"/> de la note de passage (<t t-esc="fmt(results['pass_mark'])"/>)
+            </div>
+          </div>
+          <div class="pp-h1" style="font-size:24px;"><t t-esc="fmt(results['general'])"/><span style="font-size:13px; color:var(--muted);"> /<t t-esc="'%g' % results['scale']"/></span></div>
+        </div>
+        <t t-if="not results['courses']"><div class="pp-card" style="color:var(--muted); text-align:center;">Aucune note publiée pour cette période.</div></t>
+        <t t-foreach="results['courses']" t-as="c">
+          <div class="pp-card" style="padding:14px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+              <div style="font-weight:600; font-size:14px;"><t t-esc="c['course'].name"/> <span style="font-size:11px; color:var(--muted);">coef. <t t-esc="'%g' % c['coefficient']"/></span></div>
+              <div class="pp-h1" style="font-size:17px;" t-esc="fmt(c['average'])"/>
+            </div>
+            <t t-foreach="c['lines']" t-as="line">
+              <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--muted); margin-top:5px;">
+                <span><t t-esc="line['evaluation'].name"/><t t-if="line['grade'].comment"> — <i t-esc="line['grade'].comment"/></t></span>
+                <span t-if="line['grade'].is_absent">Absent(e)</span>
+                <span t-else=""><t t-esc="fmt(line['grade'].score)"/>/<t t-esc="'%g' % line['evaluation'].max_score"/></span>
+              </div>
+            </t>
+          </div>
+        </t>
+        <a t-if="bulletin_allowed and results['courses']" t-attf-href="/presence/notes/bulletin?period_id=#{period.id or ''}"
+           class="btn" style="border:1px solid var(--ink); border-radius:10px; font-weight:600;">Télécharger mon bulletin (PDF)</a>
+      </div>
+    </t>
+  </template>
+
+  <template id="portal_calendar" name="Portail — Calendrier">
+    <t t-call="school_attendance_qr.portal_layout">
+      <div class="pp-topbar"><div class="pp-h1">Calendrier</div>
+        <div style="color:#B9C0D4; font-size:12.5px; margin-top:3px;">Devoirs, échéances, examens et événements</div></div>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <t t-if="not days"><div class="pp-card" style="color:var(--muted); text-align:center;">Rien au calendrier pour le moment.</div></t>
+        <t t-foreach="days" t-as="day">
+          <div t-attf-style="#{'opacity:.55;' if day[0] &lt; today else ''}">
+            <div style="font-size:12px; font-weight:600; color:var(--muted); margin:0 0 8px 4px;">
+              <t t-esc="fmt_date(day[0]).upper()"/><t t-if="day[0] == today"> · AUJOURD'HUI</t>
+            </div>
+            <t t-foreach="day[1]" t-as="ev">
+              <div class="pp-card" style="display:flex; gap:12px; padding:12px 14px; margin-bottom:8px;">
+                <div t-attf-style="width:6px; border-radius:3px; background:#{'var(--brick)' if ev.importance == 'high' else ('var(--amber)' if ev.importance == 'normal' else 'var(--line)')};"/>
+                <div style="flex:1;">
+                  <div style="display:flex; justify-content:space-between; gap:8px;">
+                    <span style="font-size:13.5px; font-weight:600;" t-esc="ev.name"/>
+                    <span t-if="not ev.all_day" style="font-size:12px; color:var(--muted);" t-esc="ev.date_start.strftime('%Hh%M')"/>
+                  </div>
+                  <div style="font-size:12px; color:var(--muted);">
+                    <t t-esc="event_types[ev.event_type]"/><t t-if="ev.course_id"> · <t t-esc="ev.course_id.name"/></t>
+                    <t t-if="ev.importance == 'high'"> · <b style="color:var(--brick);">important</b></t>
+                  </div>
+                  <div t-if="ev.description" style="font-size:12px; margin-top:3px;" t-esc="ev.description"/>
+                </div>
+              </div>
+            </t>
+          </div>
+        </t>
+      </div>
+    </t>
+  </template>
+
+  <template id="portal_documents" name="Portail — Documents">
+    <t t-call="school_attendance_qr.portal_layout">
+      <div class="pp-topbar"><div class="pp-h1">Documents de cours</div></div>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <t t-if="not courses"><div class="pp-card" style="color:var(--muted); text-align:center;">Aucun document déposé pour vos cours.</div></t>
+        <t t-foreach="courses" t-as="item">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:var(--muted); margin:0 0 8px 4px;" t-esc="item[0].name.upper()"/>
+            <div class="pp-card" style="padding:0; overflow:hidden;">
+              <t t-foreach="item[1]" t-as="doc">
+                <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line);">
+                  <div style="flex:1; min-width:0;">
+                    <a t-att-href="doc.download_url()" style="font-size:13.5px; font-weight:600; display:block;" t-esc="doc.name"/>
+                    <div style="font-size:11.5px; color:var(--muted);">
+                      <t t-esc="dict(doc._fields['document_type'].selection)[doc.document_type]"/> ·
+                      <t t-esc="'%.1f Mo' % (doc.file_size / 1048576.0) if doc.file_size &gt;= 1048576 else '%d Ko' % (doc.file_size // 1024)"/>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-sm dl-offline" t-att-data-url="doc.download_url()"
+                          style="border:1px solid var(--line); border-radius:8px; font-size:11.5px;">Hors ligne</button>
+                </div>
+              </t>
+            </div>
+          </div>
+        </t>
+      </div>
+      <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('.dl-offline').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              if (!window.SchoolPwa) return;
+              btn.textContent = '…';
+              window.SchoolPwa.cacheDocument(btn.dataset.url);
+            });
+          });
+          if (navigator.serviceWorker) {
+            navigator.serviceWorker.addEventListener('message', function (e) {
+              var d = e.data || {};
+              var btn = document.querySelector('.dl-offline[data-url="' + d.url + '"]');
+              if (btn) btn.textContent = d.type === 'document-cached' ? 'Disponible ✓' : 'Échec';
+            });
+          }
+        });
+      </script>
+    </t>
+  </template>
+
+</odoo>

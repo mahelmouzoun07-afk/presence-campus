@@ -1,6 +1,6 @@
 {
     'name': 'School Attendance QR',
-    'version': '18.0.9.0.0',
+    'version': '18.0.10.0.0',
     'summary': "Présence par QR (entrée + sortie), tableau de bord enseignant, alertes, attestations, scolarité",
     'category': 'Education',
     'depends': ['school_base', 'mail', 'portal', 'auth_totp_mail_enforce'],

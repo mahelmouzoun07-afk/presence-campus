@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Un enseignant ne gère que les évaluations, notes, documents et événements de SES cours -->
+  <record id="rule_evaluation_teacher" model="ir.rule">
+    <field name="name">Évaluations : enseignant, ses cours</field>
+    <field name="model_id" ref="model_school_evaluation"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[('teacher_id.user_id', '=', user.id)]</field>
+  </record>
+  <record id="rule_evaluation_admin" model="ir.rule">
+    <field name="name">Évaluations : administration, toutes</field>
+    <field name="model_id" ref="model_school_evaluation"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+
+  <record id="rule_grade_teacher" model="ir.rule">
+    <field name="name">Notes : enseignant, ses cours</field>
+    <field name="model_id" ref="model_school_grade"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[('teacher_id.user_id', '=', user.id)]</field>
+  </record>
+  <record id="rule_grade_admin" model="ir.rule">
+    <field name="name">Notes : administration, toutes</field>
+    <field name="model_id" ref="model_school_grade"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+
+  <record id="rule_document_teacher" model="ir.rule">
+    <field name="name">Documents : enseignant, ses cours</field>
+    <field name="model_id" ref="model_school_course_document"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[('teacher_id.user_id', '=', user.id)]</field>
+  </record>
+  <record id="rule_document_admin" model="ir.rule">
+    <field name="name">Documents : administration, tous</field>
+    <field name="model_id" ref="model_school_course_document"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+
+  <!-- Calendrier : tout le personnel lit tout ; l'enseignant ne modifie que les événements de ses cours -->
+  <record id="rule_event_teacher_read" model="ir.rule">
+    <field name="name">Calendrier : enseignant, lecture de tout</field>
+    <field name="model_id" ref="model_school_academic_event"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+    <field name="perm_write" eval="False"/><field name="perm_create" eval="False"/><field name="perm_unlink" eval="False"/>
+  </record>
+  <record id="rule_event_teacher_write" model="ir.rule">
+    <field name="name">Calendrier : enseignant, ses cours</field>
+    <field name="model_id" ref="model_school_academic_event"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_teacher'))]"/>
+    <field name="domain_force">[('teacher_id.user_id', '=', user.id)]</field>
+    <field name="perm_read" eval="False"/>
+  </record>
+  <record id="rule_event_admin" model="ir.rule">
+    <field name="name">Calendrier : administration, tout</field>
+    <field name="model_id" ref="model_school_academic_event"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+</odoo>

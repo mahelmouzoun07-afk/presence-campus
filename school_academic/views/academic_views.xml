@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Périodes -->
+  <record id="view_academic_period_list" model="ir.ui.view">
+    <field name="name">school.academic.period.list</field>
+    <field name="model">school.academic.period</field>
+    <field name="arch" type="xml">
+      <list editable="bottom"><field name="name"/><field name="date_from"/><field name="date_to"/></list>
+    </field>
+  </record>
+  <record id="action_academic_period" model="ir.actions.act_window">
+    <field name="name">Périodes (semestres)</field><field name="res_model">school.academic.period</field>
+    <field name="view_mode">list</field>
+  </record>
+
+  <!-- Cours : coefficient -->
+  <record id="view_school_course_form_academic" model="ir.ui.view">
+    <field name="name">school.course.form.academic</field>
+    <field name="model">school.course</field>
+    <field name="inherit_id" ref="school_base.view_school_course_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='filiere_id']" position="after">
+        <field name="coefficient"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Évaluations -->
+  <record id="view_evaluation_list" model="ir.ui.view">
+    <field name="name">school.evaluation.list</field>
+    <field name="model">school.evaluation</field>
+    <field name="arch" type="xml">
+      <list decoration-muted="state == 'draft'">
+        <field name="date"/><field name="course_id"/><field name="name"/><field name="evaluation_type"/>
+        <field name="period_id" optional="show"/><field name="weight" optional="hide"/>
+        <field name="graded_count"/><field name="average"/>
+        <field name="state" widget="badge" decoration-success="state == 'published'"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_evaluation_form" model="ir.ui.view">
+    <field name="name">school.evaluation.form</field>
+    <field name="model">school.evaluation</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_generate_grades" type="object" string="Préparer la liste des étudiants"
+                  class="btn-primary" invisible="state == 'published'"/>
+          <button name="action_publish" type="object" string="Publier les notes" invisible="state == 'published'"
+                  confirm="Les étudiants verront leurs notes et recevront une notification. Continuer ?"/>
+          <button name="action_unpublish" type="object" string="Repasser en brouillon" invisible="state == 'draft'"
+                  groups="school_base.group_school_admin"/>
+          <field name="state" widget="statusbar"/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name="name"/><field name="course_id"/><field name="evaluation_type"/>
+              <field name="weight"/><field name="max_score"/>
+            </group>
+            <group>
+              <field name="date"/><field name="time_start"/><field name="room_id"/><field name="period_id"/>
+              <field name="average" readonly="1"/>
+            </group>
+          </group>
+          <div class="alert alert-info" role="alert" invisible="state == 'draft'">
+            Notes publiées : toute modification est enregistrée dans le journal d'audit.
+          </div>
+          <field name="grade_ids">
+            <list editable="bottom" create="1">
+              <field name="student_id"/><field name="matricule"/>
+              <field name="score"/><field name="is_absent"/><field name="comment"/>
+              <field name="is_graded" column_invisible="1"/>
+            </list>
+          </field>
+          <field name="description" placeholder="Consignes, chapitres concernés…"/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_evaluation_search" model="ir.ui.view">
+    <field name="name">school.evaluation.search</field>
+    <field name="model">school.evaluation</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name"/><field name="course_id"/><field name="period_id"/>
+        <filter string="Brouillons" name="draft" domain="[('state', '=', 'draft')]"/>
+        <filter string="Publiées" name="published" domain="[('state', '=', 'published')]"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Cours" name="group_course" context="{'group_by': 'course_id'}"/>
+          <filter string="Période" name="group_period" context="{'group_by': 'period_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_evaluation" model="ir.actions.act_window">
+    <field name="name">Évaluations et notes</field><field name="res_model">school.evaluation</field>
+    <field name="view_mode">list,form</field>
+    <field name="help" type="html">
+      <p>Créez une évaluation, cliquez sur « Préparer la liste des étudiants », saisissez les notes puis publiez-les.</p>
+    </field>
+  </record>
+
+  <record id="view_grade_list" model="ir.ui.view">
+    <field name="name">school.grade.list</field>
+    <field name="model">school.grade</field>
+    <field name="arch" type="xml">
+      <list create="0">
+        <field name="student_id"/><field name="course_id"/><field name="evaluation_id"/>
+        <field name="score"/><field name="max_score"/><field name="is_absent"/><field name="state"/>
+      </list>
+    </field>
+  </record>
+  <record id="view_grade_pivot" model="ir.ui.view">
+    <field name="name">school.grade.pivot</field>
+    <field name="model">school.grade</field>
+    <field name="arch" type="xml">
+      <pivot><field name="student_id" type="row"/><field name="course_id" type="col"/><field name="score" type="measure" operator="avg"/></pivot>
+    </field>
+  </record>
+  <record id="action_grade" model="ir.actions.act_window">
+    <field name="name">Toutes les notes</field><field name="res_model">school.grade</field>
+    <field name="view_mode">pivot,list</field>
+  </record>
+
+  <!-- Calendrier académique -->
+  <record id="view_academic_event_list" model="ir.ui.view">
+    <field name="name">school.academic.event.list</field>
+    <field name="model">school.academic.event</field>
+    <field name="arch" type="xml">
+      <list decoration-danger="importance == 'high'">
+        <field name="date_start"/><field name="name"/><field name="event_type"/><field name="importance"/>
+        <field name="course_id"/><field name="promotion_id" optional="show"/><field name="filiere_id" optional="hide"/>
+      </list>
+    </field>
+  </record>
+  <record id="view_academic_event_form" model="ir.ui.view">
+    <field name="name">school.academic.event.form</field>
+    <field name="model">school.academic.event</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <group>
+            <group><field name="name"/><field name="event_type"/><field name="importance" widget="radio"/></group>
+            <group><field name="date_start"/><field name="date_end"/><field name="all_day"/></group>
+          </group>
+          <group string="Pour qui ? (laisser vide = toute l'école)">
+            <field name="course_id"/><field name="promotion_id"/><field name="filiere_id"/>
+          </group>
+          <field name="description" placeholder="Détails…"/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="view_academic_event_calendar" model="ir.ui.view">
+    <field name="name">school.academic.event.calendar</field>
+    <field name="model">school.academic.event</field>
+    <field name="arch" type="xml">
+      <calendar date_start="date_start" date_stop="date_end" all_day="all_day" color="event_type" mode="month">
+        <field name="name"/><field name="course_id"/><field name="importance"/>
+      </calendar>
+    </field>
+  </record>
+  <record id="action_academic_event" model="ir.actions.act_window">
+    <field name="name">Calendrier académique</field><field name="res_model">school.academic.event</field>
+    <field name="view_mode">calendar,list,form</field>
+  </record>
+
+  <!-- Documents de cours -->
+  <record id="view_course_document_list" model="ir.ui.view">
+    <field name="name">school.course.document.list</field>
+    <field name="model">school.course.document</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="course_id"/><field name="name"/><field name="document_type"/>
+        <field name="filename"/><field name="uploaded_by"/><field name="create_date" string="Déposé le"/>
+      </list>
+    </field>
+  </record>
+  <record id="view_course_document_form" model="ir.ui.view">
+    <field name="name">school.course.document.form</field>
+    <field name="model">school.course.document</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <group>
+            <group><field name="name"/><field name="course_id"/><field name="document_type"/></group>
+            <group><field name="file" filename="filename"/><field name="filename" invisible="1"/>
+              <field name="mimetype"/><field name="file_size"/></group>
+          </group>
+          <p class="text-muted">PDF ou images (JPEG, PNG, WebP) uniquement. Les étudiants du cours sont prévenus
+            et peuvent garder le document sur leur téléphone pour le lire hors ligne.</p>
+          <field name="description" placeholder="Description…"/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="action_course_document" model="ir.actions.act_window">
+    <field name="name">Documents de cours</field><field name="res_model">school.course.document</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <!-- Bulletins -->
+  <record id="view_bulletin_wizard_form" model="ir.ui.view">
+    <field name="name">school.bulletin.wizard.form</field>
+    <field name="model">school.bulletin.wizard</field>
+    <field name="arch" type="xml">
+      <form>
+        <group>
+          <field name="period_id"/>
+          <field name="promotion_id"/>
+          <field name="student_ids" widget="many2many_tags"/>
+        </group>
+        <footer>
+          <button name="action_generate" type="object" string="Générer les bulletins (PDF)" class="btn-primary"/>
+          <button special="cancel" string="Annuler"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+  <record id="action_bulletin_wizard" model="ir.actions.act_window">
+    <field name="name">Bulletins de notes</field><field name="res_model">school.bulletin.wizard</field>
+    <field name="view_mode">form</field><field name="target">new</field>
+  </record>
+
+  <menuitem id="menu_studies_root" name="Études" parent="school_base.menu_school_root" sequence="48"
+            groups="school_base.group_school_teacher"/>
+  <menuitem id="menu_evaluation" name="Évaluations et notes" parent="menu_studies_root" action="action_evaluation" sequence="10"/>
+  <menuitem id="menu_grade" name="Toutes les notes" parent="menu_studies_root" action="action_grade" sequence="15"/>
+  <menuitem id="menu_academic_event" name="Calendrier académique" parent="menu_studies_root" action="action_academic_event" sequence="20"/>
+  <menuitem id="menu_course_document" name="Documents de cours" parent="menu_studies_root" action="action_course_document" sequence="30"/>
+  <menuitem id="menu_bulletin" name="Bulletins de notes" parent="menu_studies_root" action="action_bulletin_wizard"
+            sequence="40" groups="school_base.group_school_admin"/>
+  <menuitem id="menu_academic_period" name="Périodes (semestres)" parent="menu_studies_root" action="action_academic_period"
+            sequence="50" groups="school_base.group_school_admin"/>
+
+</odoo>

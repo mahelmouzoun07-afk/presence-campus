@@ -1,6 +1,6 @@
 {
     'name': 'School Base',
-    'version': '18.0.4.0.0',
+    'version': '18.0.5.0.0',
     'summary': "Étudiants, cours, salles et emploi du temps",
     'category': 'Education',
     'depends': ['base', 'portal'],
