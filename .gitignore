@@ -2,3 +2,12 @@ __pycache__/
 *.pyc
 .claude/settings.local.json
 outils/*.lnk
+.claude/
+.odoo-lens.json
+*.dump
+*.sql.gz
+.env
+*.pem
+*.key
+.DS_Store
+Thumbs.db
