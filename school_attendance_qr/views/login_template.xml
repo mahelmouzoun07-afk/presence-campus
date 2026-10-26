@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Les étudiants se connectent avec leur identifiant + matricule, pas un
-       e-mail : "Email" prêterait à confusion sur la page de connexion. -->
+  <!-- Étiquette : les étudiants se connectent avec leur identifiant + matricule.
+       Le splash et les styles « application » sont ajoutés en même temps,
+       directement dans le template de connexion (pas d'xpath sur <head>, qui
+       n'existe pas sur web.login dans Odoo 18). -->
   <template id="login_label_identifiant" inherit_id="web.login">
     <xpath expr="//div[hasclass('field-login')]/label" position="replace">
       <label for="login" class="form-label d-flex justify-content-between">Identifiant</label>
@@ -9,5 +11,26 @@
     <xpath expr="//input[@name='login']" position="attributes">
       <attribute name="placeholder">Identifiant</attribute>
     </xpath>
+    <xpath expr="//div[hasclass('field-login')]" position="before">
+      <link rel="preconnect" href="https://fonts.googleapis.com"/>
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+      <link rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap"/>
+      <link rel="stylesheet" href="/school_attendance_qr/static/src/css/app.css"/>
+      <link rel="stylesheet" href="/school_attendance_qr/static/src/css/login.css"/>
+      <link rel="manifest" href="/presence/manifest.webmanifest"/>
+      <t t-set="splash_initials" t-value="(((request.env.company.name or 'P').strip().split() + ['P', 'P'])[:2])"/>
+      <div class="splash-brand">
+        <div class="splash-ring"/>
+        <div class="splash-badge">
+          <t t-esc="(splash_initials[0][:1] + splash_initials[1][:1]).upper()"/>
+        </div>
+        <div class="splash-title">
+          <div class="splash-name" t-esc="request.env.company.name"/>
+          <div class="splash-sub">Présence et vie étudiante</div>
+        </div>
+      </div>
+    </xpath>
   </template>
+
 </odoo>

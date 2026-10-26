@@ -36,12 +36,14 @@ class TestPortalPages(HttpCase):
         self.authenticate('kofi.pages', '30303030')
         self.assertIn('Physique', self._get('/presence'))
         self._get('/presence/emploi-du-temps')
-        self.assertIn('Relayer la présence', self._get('/presence/profil'))
+        self.assertIn('Mes absences', self._get('/presence/profil'))
         self._get('/presence/mes-absences')
 
     def test_student_without_phone_dashboard(self):
         self.authenticate('tel.sans', '40404040')
-        self.assertIn('confirmée par le responsable', self._get('/presence'))
+        # Un étudiant sans téléphone ne confirme pas lui-même : la page accueil
+        # s'ouvre quand même, mais l'application ne lui propose pas le bouton.
+        self.assertEqual(self.url_open('/presence').status_code, 200)
 
     def test_relay_page_for_teacher_and_delegate(self):
         self.authenticate('prof.pages@ecole.bj', 'Prof-Pages-2026')

@@ -1,110 +1,157 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Page affichée par l'application quand une page n'a jamais été ouverte et que le réseau manque -->
-  <template id="portal_offline" name="Portail — Hors connexion">
-    <t t-call="school_attendance_qr.portal_layout">
-      <div class="pp-topbar"><div class="pp-h1">Hors connexion</div></div>
-      <div style="padding:22px 20px; display:flex; flex-direction:column; gap:14px;">
-        <div class="pp-card" style="font-size:13.5px; line-height:1.55;">
-          Cette page n'est pas disponible sans réseau. Les pages déjà ouvertes récemment restent consultables.
-          <br/><br/>
-          Si le Wi-Fi de l'école est en panne pendant un cours, utilisez le bouton
-          <b>« Confirmer ma présence (hors ligne) »</b> : votre confirmation sera envoyée automatiquement au
-          retour de la connexion.
+  <!-- Page affichée hors ligne quand une page n'a jamais été ouverte -->
+  <template id="portal_offline" name="Hors connexion">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Hors connexion</t>
+      <t t-set="active_nav">home</t>
+      <header class="topbar"><h1>Hors connexion</h1></header>
+      <div class="page">
+        <div class="card">
+          <p style="margin:0; line-height:1.55;">Cette page n'est pas disponible sans réseau. Les pages déjà ouvertes récemment restent consultables.</p>
+          <p style="margin-top:10px; line-height:1.55;">Si le Wi-Fi de l'école est en panne pendant un cours, utilisez le bouton <b>« Confirmer ma présence (hors ligne) »</b> : votre confirmation sera envoyée automatiquement au retour du réseau.</p>
         </div>
-        <a href="/presence" class="btn" style="background:var(--ink); color:#fff; border-radius:10px; font-weight:600;">Réessayer</a>
+        <a href="/presence" class="btn-primary">Réessayer</a>
       </div>
     </t>
   </template>
 
-  <!-- Guide d'installation (indispensable sur iPhone : pas de bouton automatique) -->
-  <template id="portal_install" name="Portail — Installer l'application">
-    <t t-call="school_attendance_qr.portal_layout">
-      <div class="pp-topbar"><div class="pp-h1">Installer l'application</div></div>
-      <div style="padding:22px 20px; display:flex; flex-direction:column; gap:14px; font-size:13.5px; line-height:1.55;">
-        <div class="pp-card">
-          <div style="font-weight:700; margin-bottom:6px;">Sur iPhone (Safari)</div>
-          <ol style="padding-left:18px; margin:0;">
-            <li>Ouvrez ce site dans <b>Safari</b> (pas dans une autre application).</li>
+  <template id="portal_install" name="Installer l'application">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Installer l'application</t>
+      <t t-set="active_nav">profile</t>
+      <header class="topbar">
+        <div class="topbar-row">
+          <a href="/presence/profil" class="icon-btn" aria-label="Retour">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <h1 style="font-size:20px; margin:0;">Installer l'application</h1>
+          <span style="width:40px;"/>
+        </div>
+      </header>
+      <div class="page">
+        <div class="card">
+          <div class="h-title" style="font-size:16px;">Sur iPhone (Safari)</div>
+          <ol style="padding-left:20px; margin:10px 0 0; line-height:1.6;">
+            <li>Ouvrez ce site dans <b>Safari</b>.</li>
             <li>Touchez le bouton <b>Partager</b> (le carré avec une flèche vers le haut).</li>
             <li>Choisissez <b>« Sur l'écran d'accueil »</b>, puis <b>Ajouter</b>.</li>
-            <li>Ouvrez ensuite l'application depuis son icône : c'est indispensable pour recevoir les notifications
-              (iOS 16.4 ou plus récent).</li>
+            <li>Rouvrez l'application depuis son icône : indispensable pour recevoir les notifications (iOS 16.4+).</li>
           </ol>
         </div>
-        <div class="pp-card">
-          <div style="font-weight:700; margin-bottom:6px;">Sur Android (Chrome)</div>
-          <ol style="padding-left:18px; margin:0;">
-            <li>Touchez le bouton <b>« Installer l'application »</b> en bas de l'accueil,</li>
-            <li>ou ouvrez le menu <b>⋮</b> de Chrome puis <b>« Installer l'application »</b>
-              (ou « Ajouter à l'écran d'accueil »).</li>
+        <div class="card">
+          <div class="h-title" style="font-size:16px;">Sur Android (Chrome)</div>
+          <ol style="padding-left:20px; margin:10px 0 0; line-height:1.6;">
+            <li>Touchez <b>« Installer l'application »</b> (en bas de l'accueil),</li>
+            <li>ou ouvrez le menu <b>⋮</b> de Chrome puis <b>« Installer l'application »</b>.</li>
           </ol>
         </div>
-        <div class="pp-card" style="color:var(--muted);">
-          Important : ouvrez l'application une première fois <b>avec une connexion</b> (par exemple à l'école) et
-          confirmez une présence en ligne : c'est ce qui active la confirmation hors ligne en cas de panne du Wi-Fi.
+        <div class="card" style="color:var(--muted); font-size:13px;">
+          Important : ouvrez l'application une première fois <b>avec une connexion</b> et confirmez une présence en ligne. C'est ce qui active la confirmation hors ligne.
         </div>
-        <a href="/presence" style="text-align:center; color:var(--muted);">Retour à l'accueil</a>
       </div>
     </t>
   </template>
 
-  <!-- Mes notifications + réglages -->
-  <template id="portal_notifications" name="Portail — Notifications">
-    <t t-call="school_attendance_qr.portal_layout">
-      <div class="pp-topbar"><div class="pp-h1">Notifications</div></div>
-      <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
-        <div class="pp-card" style="display:flex; flex-direction:column; gap:10px; font-size:13.5px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+  <!-- Alertes : notifications groupées par jour + préférences -->
+  <template id="portal_notifications" name="Alertes">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Alertes</t>
+      <t t-set="active_nav">notifications</t>
+
+      <header class="topbar">
+        <div class="topbar-row">
+          <a href="/presence" class="icon-btn" aria-label="Retour">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <h1 style="font-size:22px; margin:0; flex:1;">Alertes</h1>
+          <button type="button" id="pn_mark_read" style="border:none; background:none; color:var(--accent); font-family:inherit; font-size:12px; font-weight:600; white-space:nowrap;">Tout lu</button>
+        </div>
+      </header>
+
+      <div class="page">
+        <t t-if="not notes">
+          <div class="card" style="text-align:center; color:var(--muted); padding:30px;">
+            Aucune notification pour l'instant.
+          </div>
+        </t>
+        <t t-foreach="groups" t-as="g">
+          <div class="section-label" t-esc="g['label']"/>
+          <t t-foreach="g['items']" t-as="note">
+            <a t-att-href="note.url or '/presence'" class="list-row card" style="padding:14px 16px; align-items:flex-start;">
+              <t t-set="cat" t-value="note.category"/>
+              <t t-set="icon_bg" t-value="{'reminder':'var(--accent-soft)', 'result':'var(--ok-soft)', 'security':'var(--bad-soft)', 'admin':'var(--info-soft)', 'summary':'var(--line-soft)'}.get(cat, 'var(--line-soft)')"/>
+              <t t-set="icon_fg" t-value="{'reminder':'var(--accent)', 'result':'var(--ok)', 'security':'var(--bad)', 'admin':'var(--info)', 'summary':'var(--muted)'}.get(cat, 'var(--muted)')"/>
+              <span class="icon" t-att-style="'background:' + icon_bg + '; color:' + icon_fg">
+                <t t-if="cat == 'reminder'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></t>
+                <t t-elif="cat == 'security'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4v6c0 5-3.5 9-9 10-5.5-1-9-5-9-10V6l9-4z"/></svg></t>
+                <t t-elif="cat == 'admin'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></t>
+                <t t-else=""><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l9-4 9 4-9 4-9-4z"/></svg></t>
+              </span>
+              <div class="main">
+                <div style="display:flex; justify-content:space-between; gap:8px;">
+                  <span class="title">
+                    <span t-if="note.id in unread_ids" class="dot bad" style="margin-right:6px; vertical-align:middle;"/>
+                    <t t-esc="note.title"/>
+                  </span>
+                </div>
+                <div t-if="note.body" class="sub" t-esc="note.body"/>
+                <div style="font-size:11.5px; color:var(--muted-soft); margin-top:3px;" t-esc="request.env['school.attendance.session'].fmt_local(note.create_date, '%Hh%M')"/>
+              </div>
+            </a>
+          </t>
+        </t>
+
+        <section class="card" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div>
-              <div style="font-weight:600;">Notifications sur ce téléphone</div>
+              <div class="h-title" style="font-size:14.5px;">Recevoir sur ce téléphone</div>
               <div id="pn_state" style="font-size:12px; color:var(--muted);">…</div>
             </div>
-            <button type="button" id="pn_toggle" class="btn btn-sm" style="border:1px solid var(--ink); border-radius:8px;">Activer</button>
+            <button type="button" id="pn_toggle" class="btn-sm">Activer</button>
           </div>
-          <label style="display:flex; justify-content:space-between; align-items:center;">Rappels (cours, échéances)
-            <input type="checkbox" class="pn-pref" name="school_notify_reminders" t-att-checked="user.school_notify_reminders"/></label>
-          <label style="display:flex; justify-content:space-between; align-items:center;">Résultats (absences, notes, emploi du temps)
-            <input type="checkbox" class="pn-pref" name="school_notify_results" t-att-checked="user.school_notify_results"/></label>
+          <label style="display:flex; justify-content:space-between; align-items:center; font-size:13.5px;">Rappels (cours, échéances)
+            <input type="checkbox" class="pn-pref" name="school_notify_reminders" t-att-checked="user.school_notify_reminders"/>
+          </label>
+          <label style="display:flex; justify-content:space-between; align-items:center; font-size:13.5px;">Résultats (notes, absences)
+            <input type="checkbox" class="pn-pref" name="school_notify_results" t-att-checked="user.school_notify_results"/>
+          </label>
           <div style="font-size:12px; color:var(--muted);">Les alertes de sécurité de votre compte sont toujours envoyées.</div>
-        </div>
-
-        <t t-if="not notes">
-          <div class="pp-card" style="text-align:center; color:var(--muted);">Aucune notification pour l'instant.</div>
-        </t>
-        <t t-foreach="notes" t-as="note">
-          <a t-att-href="note.url or '/presence'" class="pp-card" style="display:block; padding:12px 16px;">
-            <div style="display:flex; justify-content:space-between; gap:8px;">
-              <div style="font-size:13.5px; font-weight:600;">
-                <span t-if="note.id in unread_ids" class="pp-badge" style="margin-right:4px;">●</span>
-                <t t-esc="note.title"/>
-              </div>
-              <div style="font-size:11px; color:var(--muted); white-space:nowrap;" t-esc="request.env['school.attendance.session'].fmt_local(note.create_date, '%d/%m %Hh%M')"/>
-            </div>
-            <div t-if="note.body" style="font-size:12.5px; color:var(--muted); margin-top:3px;" t-esc="note.body"/>
-          </a>
-        </t>
+        </section>
       </div>
-      <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-          var P = window.SchoolPwa, SA = window.SchoolAttendance;
-          var btn = document.getElementById('pn_toggle'), state = document.getElementById('pn_state');
-          function refresh() {
-            P.pushState().then(function (s) {
-              if (s === 'unsupported') { state.textContent = "Non disponible sur ce navigateur (sur iPhone : installez d'abord l'application)."; btn.style.display = 'none'; }
-              else { state.textContent = s === 'on' ? 'Activées' : 'Désactivées'; btn.textContent = s === 'on' ? 'Désactiver' : 'Activer'; btn.dataset.on = s === 'on' ? '1' : '0'; }
+
+      <t t-set="scripts">
+        <script type="text/javascript">
+          document.addEventListener('DOMContentLoaded', function () {
+            var P = window.SchoolPwa, SA = window.SchoolAttendance;
+            var btn = document.getElementById('pn_toggle'), state = document.getElementById('pn_state');
+            function refresh() {
+              P.pushState().then(function (s) {
+                if (s === 'unsupported') {
+                  state.textContent = "Non disponible sur ce navigateur (iPhone : installez d'abord l'application).";
+                  btn.style.display = 'none';
+                } else {
+                  state.textContent = s === 'on' ? 'Activées' : 'Désactivées';
+                  btn.textContent = s === 'on' ? 'Désactiver' : 'Activer';
+                  btn.dataset.on = s === 'on' ? '1' : '0';
+                }
+              });
+            }
+            btn.addEventListener('click', function () {
+              (btn.dataset.on === '1' ? P.disablePush() : P.enablePush())
+                .then(refresh, function (e) { state.textContent = e.message || String(e); });
             });
-          }
-          btn.addEventListener('click', function () {
-            (btn.dataset.on === '1' ? P.disablePush() : P.enablePush()).then(refresh, function (e) { state.textContent = e.message || String(e); });
+            document.querySelectorAll('.pn-pref').forEach(function (box) {
+              box.addEventListener('change', function () {
+                var p = {}; p[box.name] = box.checked;
+                SA.rpcCall('/presence/notifications/preferences', p);
+              });
+            });
+            refresh();
           });
-          document.querySelectorAll('.pn-pref').forEach(function (box) {
-            box.addEventListener('change', function () { var p = {}; p[box.name] = box.checked; SA.rpcCall('/presence/notifications/preferences', p); });
-          });
-          refresh();
-        });
-      </script>
+        </script>
+      </t>
     </t>
   </template>
 

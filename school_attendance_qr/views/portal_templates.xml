@@ -1,106 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <template id="portal_layout" name="Portail étudiant — gabarit">
-    <t t-call="portal.frontend_layout">
-      <t t-set="head">
+  <!--
+    Gabarit « application étudiante » : pas d'habillage Odoo, pas de pied de page,
+    pas de barre latérale. Tout le portail étudiant est rendu dans ce shell :
+    polices, charte, mode sombre, barre de navigation (4 onglets + bouton
+    central), bandeau hors ligne, file d'attente et guide d'installation.
+  -->
+  <template id="portal_shell" name="Application étudiante — shell">
+    <html t-att-lang="lang or 'fr'" data-theme="">
+      <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"/>
+        <title><t t-esc="page_title or 'Présence'"/></title>
         <link rel="manifest" href="/presence/manifest.webmanifest"/>
         <meta name="theme-color" content="#14213D"/>
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
         <meta name="apple-mobile-web-app-title" t-att-content="request.env.company.name"/>
         <link rel="apple-touch-icon" href="/presence/icone/180.png"/>
+        <link rel="icon" type="image/png" sizes="192x192" href="/presence/icone/192.png"/>
         <link rel="preconnect" href="https://fonts.googleapis.com"/>
-        <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-        <style>
-          :root{
-            --ink:#14213D; --mist:#F2F3F1; --paper:#FFFFFF;
-            --gold:#8C5A0B; --green:#2F6B4F; --brick:#A23E2D; --amber:#B8862E; --muted:#5B6472; --line:#DEDFDA;
-          }
-          body{ background:#DADBD6; }
-          .pp-wrap{
-            width:100%; max-width:430px; min-height:85vh; margin:-1.5rem auto 0; background:var(--mist);
-            display:flex; flex-direction:column; font-family:'IBM Plex Sans',sans-serif; color:var(--ink);
-          }
-          .pp-wrap a{ text-decoration:none; color:inherit; }
-          .pp-topbar{ background:var(--ink); color:#fff; padding:18px 20px 16px; }
-          .pp-h1{ font-family:'Source Serif 4',serif; font-weight:700; font-size:19px; }
-          .pp-card{ background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
-          .pp-nav{ position:sticky; bottom:0; background:var(--paper); border-top:1px solid var(--line); display:flex; padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px)); }
-          .pp-nav a{ flex:1; text-align:center; padding:6px 0; color:var(--muted); font-size:11px; }
-          .pp-nav a.active{ color:var(--ink); font-weight:600; }
-          .pp-nav svg{ display:block; margin:0 auto 3px; }
-
-          /* bouton de confirmation (partagé avec la page de scan) */
-          .ac-seal{
-            width:132px; height:132px; border-radius:50%; margin:16px auto 6px;
-            border:3px solid var(--ink); background:var(--paper);
-            display:flex; align-items:center; justify-content:center;
-            cursor:pointer; user-select:none; transition:transform .15s ease; --state-color:var(--green);
-            font-weight:600; font-size:13.5px; text-align:center; padding:0 10px;
-          }
-          .ac-seal:active{ transform:scale(0.96); }
-          .ac-seal.ac-stamped{ animation:ac-stamp .32s ease-out; border-color:var(--state-color); color:var(--state-color); }
-          @keyframes ac-stamp{ 0%{ transform:scale(1.5) rotate(-10deg); opacity:0; } 60%{ transform:scale(0.95) rotate(2deg); opacity:1; } 100%{ transform:scale(1) rotate(0); } }
-          .ac-icon{ width:48px; height:48px; }
-          .ac-result{ font-size:1rem; font-weight:500; margin:10px 0 2px; text-align:center; }
-          .ac-result-sub{ color:var(--muted); font-size:.85rem; margin:0; text-align:center; }
-          .ac-result.ac-ok{ color:var(--green); } .ac-result.ac-warn{ color:var(--amber); } .ac-result.ac-err{ color:var(--brick); }
-          .pw-banner{ display:none; align-items:center; gap:8px; background:#5B6472; color:#fff; font-size:12.5px; padding:8px 16px; }
-          .pw-install{ display:none; align-items:center; justify-content:center; gap:8px; margin:12px 20px 0; padding:10px; border-radius:12px; border:1px dashed var(--ink); font-size:13px; font-weight:600; }
-          .pp-badge{ display:inline-block; min-width:16px; padding:0 4px; border-radius:8px; background:var(--brick); color:#fff; font-size:10px; line-height:16px; }
-        </style>
-      </t>
-      <div class="pp-wrap">
-        <div id="pw_ctx" t-att-data-student="'1' if request.env['school.offline.challenge'].sudo().holder_for_user(request.env.user) else '0'"/>
-        <div id="pw_banner" class="pw-banner"><span class="pw-text"/></div>
-        <div style="padding:0 20px;">
-          <button type="button" id="pw_offline_confirm" class="btn" style="display:none; width:100%; margin-top:12px; background:var(--ink); color:#fff; border-radius:12px; font-weight:600;">
-            Confirmer ma présence (hors ligne)
-          </button>
-          <p id="pw_offline_msg" class="ac-result" style="display:none; font-size:13px;"/>
-          <div id="pw_sync_result" style="display:none; margin-top:8px; font-size:13px;"/>
-        </div>
-        <t t-out="0"/>
-        <a id="pw_install" class="pw-install" href="/presence/installer" t-if="active_nav">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-          Installer l'application sur mon téléphone
-        </a>
-        <t t-if="active_nav">
-          <div class="pp-nav">
-            <a href="/presence" t-attf-class="#{'active' if active_nav == 'home' else ''}">
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'home' else 'var(--muted)'}" stroke-width="2"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/></svg>
-              Accueil
-            </a>
-            <a href="/presence/emploi-du-temps" t-attf-class="#{'active' if active_nav == 'timetable' else ''}">
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'timetable' else 'var(--muted)'}" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-              Emploi du temps
-            </a>
-            <t t-call="school_attendance_qr.portal_nav_extra"/>
-            <a href="/presence/notifications" t-attf-class="#{'active' if active_nav == 'notifications' else ''}">
-              <t t-set="unread" t-value="request.env['school.notification'].sudo().search_count([('user_id', '=', request.env.uid), ('is_read', '=', False)])"/>
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'notifications' else 'var(--muted)'}" stroke-width="1.8"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
-              Alertes <span t-if="unread" class="pp-badge" t-esc="unread"/>
-            </a>
-            <a href="/presence/profil" t-attf-class="#{'active' if active_nav == 'profile' else ''}">
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'profile' else 'var(--muted)'}" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
-              Profil
-            </a>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+        <link rel="stylesheet"
+              href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap"/>
+        <link rel="stylesheet" href="/school_attendance_qr/static/src/css/app.css"/>
+        <t t-out="head or ''"/>
+      </head>
+      <body>
+        <div class="app" t-att-data-nav="active_nav or 'none'">
+          <!-- bandeau hors ligne et file d'attente -->
+          <div id="pw_banner" class="banner-offline" role="status" aria-live="polite">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/></svg>
+            <span class="pw-text"/>
           </div>
-        </t>
-      </div>
-      <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
-      <script type="text/javascript" src="/school_attendance_qr/static/src/js/pwa.js"></script>
-    </t>
+
+          <!-- marqueur de contexte pour pwa.js (qui doit lancer la file d'attente seulement pour un étudiant) -->
+          <div id="pw_ctx" t-att-data-student="'1' if request.env['school.offline.challenge'].sudo().holder_for_user(request.env.user) else '0'"/>
+
+          <!-- contenu de la page -->
+          <main class="app-main" t-att-data-tab="active_nav or ''">
+            <t t-out="0"/>
+          </main>
+
+          <!-- bouton d'installation (iPhone) : visible seulement si active_nav est défini -->
+          <t t-if="active_nav">
+            <a id="pw_install" class="install-cta" href="/presence/installer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+              Installer l'application sur mon téléphone
+            </a>
+          </t>
+
+          <!-- confirmation hors ligne et retours de synchronisation -->
+          <div class="offline-controls">
+            <button type="button" id="pw_offline_confirm" class="btn-primary offline-confirm">Confirmer ma présence (hors ligne)</button>
+            <p id="pw_offline_msg" class="result-msg"/>
+            <div id="pw_sync_result" class="sync-result"/>
+          </div>
+
+          <!-- barre de navigation : 4 onglets + bouton central -->
+          <t t-if="active_nav">
+            <t t-set="unread" t-value="request.env['school.notification'].sudo().search_count([('user_id', '=', request.env.uid), ('is_read', '=', False)])"/>
+            <nav class="tabbar" aria-label="Navigation principale">
+              <a href="/presence" t-attf-class="tab #{'active' if active_nav == 'home' else ''}">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/></svg>
+                <span>Accueil</span>
+              </a>
+              <a href="/presence/emploi-du-temps" t-attf-class="tab #{'active' if active_nav == 'timetable' else ''}">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+                <span>Planning</span>
+              </a>
+              <a href="/presence" class="tab fab" aria-label="Confirmer ma présence" id="tab_confirm">
+                <span class="fab-circle">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                </span>
+              </a>
+              <a href="/presence/etudes" t-attf-class="tab #{'active' if active_nav in ('studies','timetable_studies') else ''}">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M7 10v5c2.5 2 7.5 2 10 0v-5"/></svg>
+                <span>Études</span>
+              </a>
+              <a href="/presence/profil" t-attf-class="tab #{'active' if active_nav == 'profile' else ''}">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+                <span>Moi</span>
+              </a>
+            </nav>
+          </t>
+        </div>
+        <script type="text/javascript" src="/school_attendance_qr/static/src/js/theme.js"></script>
+        <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
+        <script type="text/javascript" src="/school_attendance_qr/static/src/js/pwa.js"></script>
+        <script type="text/javascript" src="/school_attendance_qr/static/src/js/countdown.js"></script>
+        <t t-out="scripts or ''"/>
+      </body>
+    </html>
   </template>
 
-  <!-- Point d'extension de la barre de navigation (ex. : module Études) -->
+  <!-- Compatibilité : les anciens appels portal_layout utilisent le shell. -->
+  <template id="portal_layout" name="Portail étudiant — gabarit (compat)">
+    <t t-call="school_attendance_qr.portal_shell"><t t-out="0"/></t>
+  </template>
+
+  <!-- Point d'extension pour les onglets de navigation ajoutés par d'autres modules. -->
   <template id="portal_nav_extra" name="Portail — liens de navigation supplémentaires"/>
 
   <template id="portal_no_student" name="Portail — pas de profil étudiant">
-    <t t-call="portal.frontend_layout">
-      <div style="max-width:430px; margin:4rem auto; text-align:center; font-family:'IBM Plex Sans',sans-serif; color:#14213D;">
-        <p>Aucun profil étudiant n'est associé à ce compte. Contactez le secrétariat.</p>
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Compte sans profil</t>
+      <div class="page empty-page">
+        <div class="empty-card">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>
+          <p>Aucun profil étudiant n'est associé à ce compte. Contactez le secrétariat.</p>
+          <a href="/web/session/logout" class="btn-outline">Se déconnecter</a>
+        </div>
       </div>
     </t>
   </template>

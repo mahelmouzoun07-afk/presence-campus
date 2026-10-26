@@ -1,213 +1,218 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Onglet « Stages » : seulement pour les étudiants qui ont au moins une période de stage -->
-  <template id="portal_nav_internships" inherit_id="school_attendance_qr.portal_nav_extra" name="Portail — lien Stages">
-    <xpath expr="." position="inside">
-      <t t-if="request.env['school.internship.period'].sudo().search_count([('student_id.user_id', '=', request.env.uid)])">
-        <a href="/presence/stages" t-attf-class="#{'active' if active_nav == 'internships' else ''}">
-          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" t-attf-stroke="#{'var(--ink)' if active_nav == 'internships' else 'var(--muted)'}" stroke-width="1.8"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M9 6V4h6v2M12 10v6M9 13h6"/></svg>
-          Stages
-        </a>
-      </t>
-    </xpath>
+  <!-- Les stages sont désormais un sous-onglet d'Études, pas un onglet séparé. -->
+  <template id="portal_nav_internships" inherit_id="school_attendance_qr.portal_nav_extra" name="Stages — pas d'ajout de nav">
+    <xpath expr="." position="inside"/>
   </template>
 
-  <template id="portal_internships" name="Portail — Mes stages">
-    <t t-call="school_attendance_qr.portal_layout">
-      <div class="pp-topbar"><div class="pp-h1">Mes stages</div></div>
-      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+  <template id="portal_internships" name="Mes stages">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Mes stages</t>
+      <t t-set="active_nav">studies</t>
 
-        <t t-if="not period">
-          <div class="pp-card" style="text-align:center; padding:26px 18px; color:var(--muted);">
-            Aucune période de stage en cours aujourd'hui.
-          </div>
+      <header class="topbar">
+        <h1>Études</h1>
+        <t t-call="school_academic.portal_studies_segmented">
+          <t t-set="sub" t-value="'stages'"/>
+          <t t-set="has_internship" t-value="True"/>
         </t>
-        <t t-else="">
-          <div class="pp-card" style="text-align:center;">
-            <div style="color:var(--gold); font-size:12px; font-weight:600; letter-spacing:.03em;">
-              <t t-esc="'GARDE EN COURS' if shift else 'STAGE EN COURS'"/>
-            </div>
-            <div class="pp-h1" style="font-size:20px; margin-top:6px;" t-esc="period.site_id.name"/>
-            <div style="color:var(--muted); font-size:13px; margin-top:3px;">
-              <t t-if="period.site_id.specialty"><t t-esc="period.site_id.specialty"/> · </t>
-              du <t t-esc="period.date_start.strftime('%d/%m')"/> au <t t-esc="period.date_end.strftime('%d/%m/%Y')"/>
-            </div>
-            <div t-if="shift" style="color:var(--muted); font-size:12.5px; margin-top:6px;">
-              Entrée confirmée à <t t-esc="request.env['school.attendance.session'].fmt_local(shift.checkin_time, '%d/%m %Hh%M')"/>
-            </div>
-            <div id="ac_seal" class="ac-seal">
-              <span class="ac-seal-label"><t t-esc="'Confirmer ma sortie' if shift else 'Confirmer mon entrée'"/></span>
-            </div>
-            <p id="ac_result" class="ac-result" style="display:none;"/>
-            <p id="ac_result_sub" class="ac-result-sub" style="display:none;"/>
-            <div style="color:var(--muted); font-size:11.5px; margin-top:8px;">
-              Position et appareil vérifiés. Fonctionne aussi sans réseau (sous-sol, bloc) : la confirmation
-              est envoyée au retour du réseau.
-            </div>
-          </div>
-          <script type="text/javascript">
-            document.addEventListener('DOMContentLoaded', function () {
-              SchoolAttendance.initConfirmWidget('', '<t t-esc="phase_hint"/>', {
-                confirmUrl: '/presence/stages/confirmer', offline: { target: 'internship' },
-              });
-            });
-          </script>
+      </header>
 
-          <t t-if="shift">
-            <div t-if="check" class="pp-card" style="border:2px solid var(--brick); text-align:center;">
-              <div style="color:var(--brick); font-size:12px; font-weight:700;">CONTRÔLE DE PRÉSENCE</div>
-              <div style="font-size:13px; margin:6px 0 10px;">Confirmez avec votre empreinte avant
-                <b t-esc="request.env['school.attendance.session'].fmt_local(check.deadline)"/>.</div>
-              <button type="button" id="tr_check" class="btn" style="background:var(--brick); color:#fff; border-radius:10px; font-weight:600; width:100%;">
-                Je suis présent(e) — confirmer
-              </button>
-              <p id="tr_check_msg" class="ac-result" style="display:none; font-size:13px;"/>
+      <div class="page">
+        <t t-if="not period">
+          <div class="card" style="text-align:center; padding:28px; color:var(--muted);">Aucune période de stage en cours aujourd'hui.</div>
+        </t>
+
+        <t t-elif="check">
+          <section class="card spotlight" style="border:2px solid var(--bad); display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="eyebrow bad">CONTRÔLE DE PRÉSENCE</span>
+              <span class="eyebrow bad" id="ac_countdown" t-att-data-close-at="check.deadline.isoformat() + 'Z'"/>
             </div>
-            <div id="tr_box" class="pp-card" t-att-data-minutes="ping_minutes" style="font-size:12.5px;">
-              <div style="font-weight:600;">Suivi de présence pendant la garde</div>
-              <div id="tr_status" style="color:var(--muted); margin-top:3px;">Démarrage du suivi GPS…</div>
-              <div style="color:var(--muted); font-size:11.5px; margin-top:6px;">
-                Gardez cette page ouverte pendant votre garde : votre position est vérifiée régulièrement et des
-                contrôles avec empreinte sont demandés aux heures de pause
-                (<t t-esc="period.site_id.check_times or 'aucun'"/>). Écran verrouillé, le suivi s'interrompt.
+            <div style="font-size:13.5px;">Pause de <t t-esc="request.env['school.attendance.session'].fmt_local(check.due_at, '%Hh%M')"/> : confirmez votre présence avec votre empreinte.</div>
+            <button type="button" id="tr_check" class="btn-primary danger">Je suis présent(e) — confirmer</button>
+            <p id="tr_check_msg" class="ac-result" style="display:none;"/>
+          </section>
+        </t>
+
+        <t t-if="period">
+          <section class="card spotlight" style="background:var(--ink); color:#fff; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <t t-if="shift">
+                  <div class="eyebrow" style="color:#E0B66A;">GARDE EN COURS</div>
+                </t>
+                <t t-else="">
+                  <div class="eyebrow" style="color:#9ED3B5;">PÉRIODE DE STAGE</div>
+                </t>
+                <div style="font-family:'Source Serif 4',serif; font-size:20px; font-weight:700; margin-top:4px;" t-esc="period.site_id.name"/>
+                <t t-if="shift">
+                  <div style="font-size:12.5px; color:#C4CAD8;">Depuis <t t-esc="request.env['school.attendance.session'].fmt_local(shift.checkin_time, '%Hh%M')"/></div>
+                </t>
+                <t t-else="">
+                  <div style="font-size:12.5px; color:#C4CAD8;">
+                    <t t-if="period.site_id.specialty"><t t-esc="period.site_id.specialty"/> · </t>
+                    du <t t-esc="period.date_start.strftime('%d/%m')"/> au <t t-esc="period.date_end.strftime('%d/%m/%Y')"/>
+                  </div>
+                </t>
               </div>
             </div>
-            <script type="text/javascript" src="/school_internship/static/src/js/tracking.js"></script>
-          </t>
+            <div id="tr_box" t-att-data-minutes="ping_minutes" style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#9ED3B5;">
+              <span class="dot ok live-dot"/>
+              <span id="tr_status">Démarrage du suivi GPS…</span>
+            </div>
+            <a href="/presence/confirmer-stage" class="btn-primary" style="background:#fff; color:var(--ink);">
+              <t t-esc="'Terminer ma garde' if shift else 'Confirmer mon entrée'"/>
+            </a>
+          </section>
 
-          <div class="pp-card">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-              <div style="font-size:13.5px; font-weight:600;">Heures cliniques validées</div>
-              <div class="pp-h1" style="font-size:18px;"><t t-esc="'%g' % period.validated_hours"/> / <t t-esc="'%g' % period.required_hours"/> h</div>
+          <section class="card" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+              <span style="font-size:14px; font-weight:700;">Heures cliniques validées</span>
+              <span style="font-family:'Source Serif 4',serif; font-size:19px; font-weight:700;">
+                <t t-esc="'%g' % period.validated_hours"/> / <t t-esc="'%g' % period.required_hours"/> h
+              </span>
             </div>
-            <div style="height:7px; border-radius:4px; background:var(--mist); margin-top:10px; overflow:hidden;">
-              <div t-attf-style="height:100%%; width:#{period.progress}%%; background:var(--green);"/>
+            <t t-set="validated_pct" t-value="min(100, period.progress) if period.required_hours else 0"/>
+            <t t-set="pending_pct" t-value="min(100 - validated_pct, (period.pending_hours / period.required_hours * 100) if period.required_hours else 0)"/>
+            <div class="progress">
+              <span t-attf-style="width:#{validated_pct}%; background:var(--ok);"/>
+              <span t-attf-style="width:#{pending_pct}%; background:var(--warn);"/>
             </div>
-            <div style="color:var(--muted); font-size:12px; margin-top:8px;">
-              <t t-esc="'%g' % period.pending_hours"/> h en attente de validation par le superviseur
+            <div style="display:flex; gap:14px; font-size:12px; color:var(--muted);">
+              <span style="display:flex; align-items:center; gap:5px;"><span class="dot ok"/>Validées</span>
+              <span style="display:flex; align-items:center; gap:5px;"><span class="dot warn"/><t t-esc="'%g' % period.pending_hours"/> h à valider</span>
             </div>
-          </div>
+          </section>
 
-          <div t-if="recent">
-            <div style="font-size:12px; font-weight:600; color:var(--muted); margin:4px 0 8px 4px;">DERNIÈRES GARDES</div>
-            <div class="pp-card" style="padding:0; overflow:hidden;">
+          <t t-if="recent">
+            <div class="section-label">DERNIÈRES GARDES</div>
+            <div class="card-row">
               <t t-foreach="recent" t-as="g">
-                <div style="display:flex; justify-content:space-between; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); font-size:13px;">
-                  <div>
-                    <div style="font-weight:600;" t-esc="request.env['school.attendance.session'].fmt_local(g.checkin_time, '%d/%m %Hh%M')"/>
-                    <div style="color:var(--muted); font-size:12px;">
+                <div class="list-row">
+                  <div class="main">
+                    <div class="title"><t t-esc="request.env['school.attendance.session'].fmt_local(g.checkin_time, '%d/%m · %Hh%M')"/></div>
+                    <div class="sub">
                       <t t-if="g.checkout_time"><t t-esc="'%g' % g.duration_hours"/> h</t>
                       <t t-else="">en cours</t>
                       <t t-if="g.offline"> · hors ligne</t>
                     </div>
                   </div>
-                  <span t-if="g.is_validated" style="color:var(--green); font-size:12px; font-weight:600;">Validée</span>
-                  <span t-elif="g.checkout_state == 'rejected' or g.checkin_state == 'rejected'" style="color:var(--brick); font-size:12px; font-weight:600;">Refusée</span>
-                  <span t-elif="g.checkout_time" style="color:var(--amber); font-size:12px; font-weight:600;">À valider</span>
+                  <span t-if="g.is_validated" class="badge ok">Validée</span>
+                  <span t-elif="g.checkin_state == 'rejected' or g.checkout_state == 'rejected'" class="badge bad">Refusée</span>
+                  <span t-elif="g.checkout_time" class="badge warn">À valider</span>
                 </div>
               </t>
             </div>
-          </div>
+          </t>
         </t>
-
-        <t t-set="validated" t-value="periods.filtered(lambda p: p.status == 'validated')"/>
-        <div t-if="validated">
-          <div style="font-size:12px; font-weight:600; color:var(--muted); margin:4px 0 8px 4px;">RELEVÉS D'HEURES</div>
-          <div class="pp-card" style="padding:0; overflow:hidden;">
-            <t t-foreach="validated" t-as="p">
-              <a t-attf-href="/presence/stages/releve/#{p.id}" style="display:flex; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line); font-size:13px;">
-                <span><t t-esc="p.site_id.name"/> · <t t-esc="'%g' % p.validated_hours"/> h</span>
-                <span style="color:var(--muted);">PDF</span>
-              </a>
-            </t>
-          </div>
-        </div>
       </div>
+
+      <t t-if="shift">
+        <script type="text/javascript" src="/school_internship/static/src/js/tracking.js"></script>
+      </t>
     </t>
   </template>
 
-  <!-- Écran du superviseur : même esprit que l'écran du responsable des relais -->
   <template id="portal_supervisor" name="Portail — Validation des gardes">
-    <t t-call="school_attendance_qr.portal_layout">
-      <div class="pp-topbar">
-        <div class="pp-h1">Gardes à valider</div>
-        <div style="color:#B9C0D4; font-size:12.5px; margin-top:3px;" t-esc="teacher.name"/>
-      </div>
-      <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
-        <div class="pp-card" style="font-size:12.5px; color:var(--muted); line-height:1.5;">
-          Vous validez avec <b>votre</b> empreinte. Seules les gardes doublement validées comptent dans les heures
-          de l'étudiant. Sans réseau, la validation est gardée sur ce téléphone et envoyée au retour du réseau.
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Gardes à valider</t>
+
+      <header class="topbar">
+        <div class="topbar-row">
+          <a href="/odoo" class="icon-btn" aria-label="Retour">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <h1 style="font-size:22px; margin:0; flex:1;">Gardes à valider</h1>
+          <span style="width:40px;"/>
+        </div>
+        <div class="topbar-sub" t-esc="teacher.name"/>
+      </header>
+
+      <div class="page">
+        <div class="card" style="font-size:12.5px; color:var(--muted); line-height:1.5;">
+          Vous validez avec <b>votre</b> empreinte. Seules les gardes doublement validées comptent dans les heures de l'étudiant.
         </div>
         <t t-if="not pending">
-          <div class="pp-card" style="text-align:center; padding:26px 18px; color:var(--muted);">Aucune garde en attente.</div>
+          <div class="card" style="text-align:center; color:var(--muted); padding:28px;">Aucune garde en attente.</div>
         </t>
         <t t-foreach="pending" t-as="g">
-          <div class="pp-card sv-row" t-att-data-id="g.id" style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card sv-row" t-att-data-id="g.id" style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; gap:8px;">
               <div>
                 <div style="font-size:14px; font-weight:600;" t-esc="g.student_id.name"/>
                 <div style="font-size:12px; color:var(--muted);">
-                  <t t-esc="g.site_id.name"/> · <t t-esc="request.env['school.attendance.session'].fmt_local(g.checkin_time, '%d/%m %Hh%M')"/>
+                  <t t-esc="g.site_id.name"/> ·
+                  <t t-esc="request.env['school.attendance.session'].fmt_local(g.checkin_time, '%d/%m %Hh%M')"/>
                   → <t t-esc="request.env['school.attendance.session'].fmt_local(g.checkout_time, '%d/%m %Hh%M')"/>
                 </div>
               </div>
-              <div class="pp-h1" style="font-size:17px; white-space:nowrap;"><t t-esc="'%g' % g.duration_hours"/> h</div>
+              <div style="font-family:'Source Serif 4',serif; font-size:17px; font-weight:700; white-space:nowrap;"><t t-esc="'%g' % g.duration_hours"/> h</div>
             </div>
-            <div t-if="g.flag_reason" style="font-size:12px; color:var(--amber);" t-esc="g.flag_reason"/>
+            <div t-if="g.flag_reason" style="font-size:12px; color:var(--warn);" t-esc="g.flag_reason"/>
             <div style="display:flex; gap:8px; align-items:center;">
               <label style="font-size:12px; color:var(--muted);">Évaluation (facultative)</label>
-              <select name="rating" class="form-select form-select-sm" style="width:auto;">
+              <select name="rating" class="btn-sm">
                 <option value="">—</option>
                 <option value="1">1</option><option value="2">2</option><option value="3">3</option>
                 <option value="4">4</option><option value="5">5</option>
               </select>
             </div>
-            <textarea name="comment" class="form-control" rows="2" placeholder="Commentaire (facultatif)"/>
-            <button type="button" class="sv-validate btn" style="background:var(--ink); color:#fff; border-radius:10px; font-weight:600;">
-              Valider avec mon empreinte
-            </button>
-            <p class="sv-msg ac-result" style="display:none; font-size:13px;"/>
+            <textarea name="comment" rows="2" placeholder="Commentaire (facultatif)" class="ap-input" style="height:auto; padding:10px 12px;"/>
+            <button type="button" class="sv-validate btn-primary">Valider avec mon empreinte</button>
+            <p class="sv-msg ac-result" style="display:none;"/>
           </div>
         </t>
-        <a href="/odoo" style="text-align:center; font-size:13px; color:var(--muted);">Retour à l'espace enseignant</a>
+        <a href="/odoo" style="text-align:center; font-size:13px; color:var(--muted); padding:6px;">Retour à l'espace enseignant</a>
       </div>
-      <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-          var SA = window.SchoolAttendance, P = window.SchoolPwa;
-          function show(el, cls, text) { el.className = 'sv-msg ac-result ' + cls; el.textContent = text; el.style.display = 'block'; }
-          document.querySelectorAll('.sv-row').forEach(function (row) {
-            var btn = row.querySelector('.sv-validate'), msg = row.querySelector('.sv-msg');
-            btn.addEventListener('click', function () {
-              var data = { attendance_id: row.dataset.id, rating: row.querySelector('[name=rating]').value || null,
-                           comment: row.querySelector('[name=comment]').value || null };
-              btn.disabled = true; show(msg, '', 'Vérification…');
-              P.probe().then(function (state) {
-                if (state === 'offline') {
-                  return P.confirmOffline(Object.assign({ target: 'internship_validation' }, data), { gps: false })
-                    .then(function () { show(msg, 'ac-warn', 'Validation enregistrée hors ligne : elle sera envoyée au retour du réseau.'); });
-                }
-                return SA.runWebAuthnCeremony('/presence/stages/superviseur/options').then(function (wa) {
-                  return SA.rpcCall('/presence/stages/valider', Object.assign(data, { webauthn_mode: wa.mode, webauthn_credential: wa.credential }));
-                }).then(function (res) {
-                  res = res || {};
-                  if (res.error) { btn.disabled = false; show(msg, 'ac-err', res.error); return; }
-                  show(msg, 'ac-ok', 'Garde validée.');
-                  btn.style.display = 'none';
-                });
-              }).catch(function (err) { btn.disabled = false; show(msg, 'ac-err', err.message || String(err)); });
+
+      <t t-set="head">
+        <style>
+          .ap-input { width:100%; box-sizing:border-box; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:10px 12px; font-family:inherit; font-size:14px; }
+        </style>
+      </t>
+      <t t-set="scripts">
+        <script type="text/javascript">
+          document.addEventListener('DOMContentLoaded', function () {
+            var SA = window.SchoolAttendance, P = window.SchoolPwa;
+            function show(el, cls, text) { el.className = 'sv-msg ac-result ' + cls; el.textContent = text; el.style.display = 'block'; }
+            document.querySelectorAll('.sv-row').forEach(function (row) {
+              var btn = row.querySelector('.sv-validate'), msg = row.querySelector('.sv-msg');
+              btn.addEventListener('click', function () {
+                var data = { attendance_id: row.dataset.id, rating: row.querySelector('[name=rating]').value || null,
+                             comment: row.querySelector('[name=comment]').value || null };
+                btn.disabled = true; show(msg, '', 'Vérification…');
+                P.probe().then(function (state) {
+                  if (state === 'offline') {
+                    return P.confirmOffline(Object.assign({ target: 'internship_validation' }, data), { gps: false })
+                      .then(function () { show(msg, 'ac-warn', 'Validation enregistrée hors ligne.'); });
+                  }
+                  return SA.runWebAuthnCeremony('/presence/stages/superviseur/options').then(function (wa) {
+                    return SA.rpcCall('/presence/stages/valider', Object.assign(data, { webauthn_mode: wa.mode, webauthn_credential: wa.credential }));
+                  }).then(function (res) {
+                    res = res || {};
+                    if (res.error) { btn.disabled = false; show(msg, 'ac-err', res.error); return; }
+                    show(msg, 'ac-ok', 'Garde validée.'); btn.style.display = 'none';
+                  });
+                }).catch(function (err) { btn.disabled = false; show(msg, 'ac-err', err.message || String(err)); });
+              });
             });
           });
-        });
-      </script>
+        </script>
+      </t>
     </t>
   </template>
 
   <template id="portal_supervisor_denied" name="Portail — Superviseur non reconnu">
-    <t t-call="school_attendance_qr.portal_layout">
-      <div class="pp-topbar"><div class="pp-h1">Gardes à valider</div></div>
-      <div style="padding:22px 20px;">
-        <div class="pp-card" style="text-align:center; color:var(--muted);">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Gardes à valider</t>
+
+      <header class="topbar">
+        <h1>Gardes à valider</h1>
+      </header>
+      <div class="page">
+        <div class="card" style="text-align:center; color:var(--muted); padding:28px;">
           Cet écran est réservé aux superviseurs désignés d'un site de stage.
         </div>
       </div>

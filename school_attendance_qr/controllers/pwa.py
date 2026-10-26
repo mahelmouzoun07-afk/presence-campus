@@ -3,7 +3,7 @@ import base64
 import io
 import json
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 from odoo.tools import file_open
 
@@ -157,8 +157,27 @@ class SchoolPwaController(http.Controller):
             return response
         Notif = request.env['school.notification'].sudo()
         notes = Notif.search([('user_id', '=', request.env.uid)], limit=50)
+        # Regroupement par jour local (Aujourd'hui / Hier / <date>) pour l'affichage
+        from datetime import timedelta as _td
+        today = fields.Date.context_today(request.env.user)
+        _months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août',
+                   'septembre', 'octobre', 'novembre', 'décembre']
+        groups_by_day = {}
+        for n in notes:
+            day = fields.Date.to_date(request.env['school.attendance.session'].fmt_local(n.create_date, '%Y-%m-%d'))
+            groups_by_day.setdefault(day, []).append(n)
+        groups = []
+        for day in sorted(groups_by_day.keys(), reverse=True):
+            if day == today:
+                label = "AUJOURD'HUI"
+            elif day == today - _td(days=1):
+                label = "HIER"
+            else:
+                label = f"{day.day} {_months[day.month - 1]}".upper()
+            groups.append({'label': label, 'items': groups_by_day[day]})
         page = request.render('school_attendance_qr.portal_notifications', {
-            'student': student, 'notes': notes, 'unread_ids': set(notes.filtered(lambda n: not n.is_read).ids),
+            'student': student, 'notes': notes, 'groups': groups,
+            'unread_ids': set(notes.filtered(lambda n: not n.is_read).ids),
             'user': request.env.user, 'active_nav': 'notifications'})
         notes.filtered(lambda n: not n.is_read).write({'is_read': True})
         return page

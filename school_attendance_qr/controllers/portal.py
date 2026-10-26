@@ -99,34 +99,151 @@ class SchoolPortalController(http.Controller):
         phase_hint = 'checkin'
         if current and current.is_within_checkout_window() and not current.is_within_checkin_window():
             phase_hint = 'checkout'
-        return request.render('school_attendance_qr.portal_dashboard', {
-            'student': student, 'session': current, 'next_session': next_session,
-            'token': current.room_id.qr_token if current else False, 'phase_hint': phase_hint,
-            'today_label': _format_date_fr(fields.Date.context_today(request.env.user)),
-            'rate_label': f"{student.attendance_rate:.1f} %",
-        })
+        today = fields.Date.context_today(request.env.user)
+        close_at = False
+        if current:
+            from datetime import timedelta as _td
+            close = current.time_start + _td(minutes=current.checkin_window_minutes) if phase_hint == 'checkin' \
+                else current.time_end + _td(minutes=current.checkout_window_minutes)
+            close_at = close.isoformat() + 'Z'
+        return request.render('school_attendance_qr.portal_dashboard', dict(
+            self._home_values(student), session=current, next_session=next_session,
+            token=current.room_id.qr_token if current else False, phase_hint=phase_hint,
+            today_label=_format_date_fr(today), close_at=close_at,
+            rate_label=f"{student.attendance_rate:.1f} %",
+            student=student,
+        ))
+
+    def _home_values(self, student):
+        """Données supplémentaires de l'accueil (moyenne, dernière note, échéances,
+        nombre de cours du jour). Les modules Études et Stages n'étant pas
+        toujours présents, on reste tolérant si leurs modèles sont absents."""
+        env = request.env
+        today = fields.Date.context_today(env.user)
+        count_today = env['school.attendance.session'].sudo().search_count([
+            ('course_id', 'in', student.sudo().course_ids.ids), ('date', '=', today)])
+        values = {
+            'today_count': count_today, 'moyenne': None, 'moyenne_scale': 20, 'moyenne_link': '/presence/profil',
+            'latest_note': False, 'upcoming_events': [],
+        }
+        Grade = env.get('school.grade')
+        if Grade is not None:
+            Period = env['school.academic.period']
+            period = Period.sudo().current() if 'current' in dir(Period) else Period
+            try:
+                res = student.compute_results(period or None) if hasattr(student, 'compute_results') else None
+            except Exception:
+                res = None
+            if res and res.get('general') is not None:
+                moy = res['general']
+                values['moyenne'] = f"{moy:.2f}".rstrip('0').rstrip('.').replace('.', ',')
+                values['moyenne_scale'] = res['scale']
+                values['moyenne_link'] = '/presence/notes'
+            latest = Grade.sudo().search([('student_id', '=', student.id), ('state', '=', 'published'),
+                                           ('is_graded', '=', True)], order='write_date desc', limit=1)
+            if latest:
+                values['latest_note'] = f"{latest.evaluation_id.name} {latest.score:g}".replace('.', ',')
+        Event = env.get('school.academic.event')
+        if Event is not None:
+            from datetime import timedelta as _td
+            now = fields.Datetime.now()
+            events = Event.sudo().for_student(student, now, now + _td(days=14))[:3]
+            _days = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
+            for ev in events:
+                day = fields.Date.to_date(
+                    env['school.attendance.session'].fmt_local(ev.date_start, '%Y-%m-%d'))
+                values['upcoming_events'].append({
+                    'day_label': _days[day.weekday()], 'day_num': day.day,
+                    'title': ev.name,
+                    'sub': f"{dict(ev._fields['event_type'].selection).get(ev.event_type, '')}"
+                           + (f" · {ev.course_id.name}" if ev.course_id else ''),
+                    'level': {'high': 'bad', 'normal': 'warn', 'low': 'muted'}.get(ev.importance, 'muted'),
+                })
+        return values
 
     @http.route('/presence/emploi-du-temps', type='http', auth='user', website=True)
     def portal_timetable(self, **kw):
         student, response = portal_gate()
         if response:
             return response
-        sessions = student.upcoming_week_sessions()
-        by_day = {}
-        for sess in sessions:
-            by_day.setdefault(sess.date, []).append(sess)
-        return request.render('school_attendance_qr.portal_timetable', {
-            'student': student, 'days': sorted(by_day.items()), 'fmt_date': _format_date_fr,
-        })
+        return request.render('school_attendance_qr.portal_timetable', dict(
+            self._timetable_values(student), student=student))
+
+    def _timetable_values(self, student):
+        """Semaine courante (lundi → dimanche) et liste des cours par jour, avec
+        pour chaque cours son statut (présent/absent/à venir/en cours/examen)."""
+        from datetime import timedelta as _td
+        today = fields.Date.context_today(request.env.user)
+        monday = today - _td(days=today.weekday())
+        _labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+        _titles = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE']
+        _months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août',
+                   'septembre', 'octobre', 'novembre', 'décembre']
+        Session = request.env['school.attendance.session'].sudo()
+        now = fields.Datetime.now()
+        week = []
+        for i in range(7):
+            day = monday + _td(days=i)
+            sessions = Session.search([
+                ('course_id', 'in', student.sudo().course_ids.ids), ('date', '=', day),
+            ], order='time_start')
+            items = []
+            for s in sessions:
+                color = 'var(--muted)'
+                status = 'À venir'
+                record = s.record_ids.filtered(lambda r: r.student_id == student)[:1]
+                if s.time_start <= now <= (s.time_end or s.time_start):
+                    color, status = 'var(--accent)', 'En cours'
+                elif record and record.state == 'rejected':
+                    color, status = 'var(--bad)', 'Refusée'
+                elif record and record.attendance_complete:
+                    color, status = 'var(--ok)', 'Présent'
+                elif s.time_end and s.time_end < now:
+                    color, status = 'var(--bad)', 'Absent'
+                items.append({
+                    'start': Session.fmt_local(s.time_start, '%Hh%M'),
+                    'end': Session.fmt_local(s.time_end, '%Hh%M') if s.time_end else '',
+                    'name': s.course_id.name,
+                    'place': f"{s.room_id.name} · {s.teacher_id.name}" if s.teacher_id else s.room_id.name,
+                    'status': status, 'color': color,
+                })
+            key = day.strftime('%Y-%m-%d')
+            week.append({
+                'key': key, 'label': _labels[i], 'num': day.day, 'today': day == today,
+                'has': bool(items), 'items': items,
+                'title': f"{_titles[i]} {day.day} {_months[day.month - 1].upper()}",
+            })
+        return {'week': week}
 
     @http.route('/presence/profil', type='http', auth='user', website=True)
     def portal_profile(self, **kw):
         student, response = portal_gate()
         if response:
             return response
-        return request.render('school_attendance_qr.portal_profile', {
-            'student': student, 'rate_label': f"{student.attendance_rate:.1f} %",
-        })
+        # scolarité : visible seulement si l'étudiant doit encore quelque chose
+        payment_status, payment_color = False, 'var(--muted)'
+        try:
+            balance = student.sudo().fees_balance
+            if balance and balance > 0 and not student.sudo().fees_exempt:
+                payment_status = f"Reste {balance:,.0f} {student.currency_id.symbol or ''}".replace(',', ' ')
+                payment_color = 'var(--warn)'
+        except Exception:
+            pass
+        return request.render('school_attendance_qr.portal_profile', dict(
+            self._home_values(student), student=student,
+            rate_label=f"{student.attendance_rate:.1f} %",
+            payment_status=payment_status, payment_color=payment_color,
+        ))
+
+    @http.route('/presence/attestations', type='http', auth='user', website=True)
+    def portal_certificates(self, **kw):
+        """Liste des attestations déjà émises pour cet étudiant."""
+        student, response = portal_gate()
+        if response:
+            return response
+        certs = request.env['school.attendance.certificate'].sudo().search(
+            [('student_id', '=', student.id)], order='issue_date desc')
+        return request.render('school_attendance_qr.portal_certificates', {'student': student, 'certs': certs})
 
     @http.route('/presence/mes-absences', type='http', auth='user', website=True)
     def portal_absences(self, **kw):

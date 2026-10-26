@@ -226,7 +226,9 @@ class TestInternshipPortal(HttpCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn('Urgences portail', page.text)
         self.assertIn('Heures cliniques', page.text)
-        self.assertIn('/presence/stages', self.url_open('/presence').text)  # onglet visible
+        # L'accès « Mes stages » se fait via l'onglet Études (sous-onglet Stages),
+        # pas depuis l'accueil. On vérifie que la page Études le propose.
+        self.assertIn('/presence/stages', self.url_open('/presence/etudes').text)
         self.assertIn('réservé aux superviseurs', self.url_open('/presence/stages/validation').text)
         self.authenticate('dr.portail@chu.bj', 'Dr-Portail-2026')
         page = self.url_open('/presence/stages/validation')

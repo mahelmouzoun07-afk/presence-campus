@@ -31,7 +31,17 @@ class SchoolAcademicPortal(http.Controller):
             'scale': results['scale'], 'doc_count': request.env['school.course.document'].sudo().search_count(
                 [('course_id', 'in', student.sudo().course_ids.ids)]),
             'event_types': dict(EVENT_TYPES), 'fmt_date': _format_date_fr, 'active_nav': 'studies',
+            'has_internship': self._has_internship(student),
         })
+
+    def _has_internship(self, student):
+        """Vrai si l'étudiant a au moins une période de stage : les onglets
+        « Stages » n'apparaissent que pour eux (facultés de médecine).
+        Le module school_internship n'est pas obligatoirement installé."""
+        if 'school.internship.period' not in request.env:
+            return False
+        return bool(request.env['school.internship.period'].sudo().search_count(
+            [('student_id', '=', student.id)]))
 
     @http.route('/presence/notes', type='http', auth='user', website=True)
     def grades(self, period_id=None, **kw):

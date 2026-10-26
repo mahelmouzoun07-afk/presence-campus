@@ -1,33 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <template id="portal_absences" name="Portail — Mes absences">
-    <t t-call="school_attendance_qr.portal_layout">
+
+  <template id="portal_absences" name="Mes absences">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Mes absences</t>
       <t t-set="active_nav">profile</t>
 
-      <div class="pp-topbar" style="display:flex; align-items:center; gap:12px;">
-        <a href="/presence/profil" aria-label="Retour" style="color:#fff;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
-        </a>
-        <div class="pp-h1">Mes cours manqués</div>
-      </div>
+      <header class="topbar">
+        <div class="topbar-row">
+          <a href="/presence/profil" class="icon-btn" aria-label="Retour">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <h1 style="font-size:20px; margin:0;">Mes absences</h1>
+          <span style="width:40px;"/>
+        </div>
+        <p class="topbar-sub">
+          <t t-esc="student.sessions_missed"/> séance(s) manquée(s) sur <t t-esc="student.sessions_expected"/>
+          (<t t-esc="rate_label"/>).
+        </p>
+      </header>
 
-      <div style="padding:16px 20px 24px; display:flex; flex-direction:column; gap:10px;">
+      <div class="page">
         <t t-if="not missed">
-          <div class="pp-card" style="text-align:center; color:var(--green); font-weight:600;">Aucune absence — bravo !</div>
+          <div class="card" style="text-align:center; color:var(--ok); padding:30px;">
+            Aucune absence enregistrée. Continuez comme ça !
+          </div>
         </t>
         <t t-foreach="missed" t-as="sess">
-          <div class="pp-card" style="display:flex; gap:14px;">
-            <div style="width:3px; border-radius:2px; background:var(--brick);"/>
-            <div style="flex:1;">
-              <div style="font-size:12px; color:var(--muted); font-weight:600;" t-out="fmt_date(sess.date).capitalize()"/>
-              <div style="font-weight:700; font-size:15px; margin-top:2px;" t-esc="sess.course_id.name"/>
-              <div style="color:var(--muted); font-size:13px; margin-top:2px;">
-                <t t-esc="sess.room_id.name"/> &#183; <t t-esc="request.env['school.attendance.session'].fmt_local(sess.time_start, '%Hh%M')"/>
-              </div>
+          <div class="card session-row">
+            <div class="session-time">
+              <div class="session-start" t-esc="request.env['school.attendance.session'].fmt_local(sess.time_start, '%d/%m')"/>
+              <div class="session-end" t-esc="request.env['school.attendance.session'].fmt_local(sess.time_start, '%Hh%M')"/>
             </div>
+            <span class="session-rail" style="background:var(--bad);"/>
+            <div class="session-main">
+              <div class="session-name" t-esc="sess.course_id.name"/>
+              <div class="session-place" t-esc="sess.room_id.name"/>
+            </div>
+            <span class="badge bad">Absent</span>
           </div>
+        </t>
+      </div>
+
+      <t t-set="head">
+        <style>
+          .session-row { display:flex; gap:12px; align-items:stretch; }
+          .session-time { width:52px; flex:none; font-variant-numeric: tabular-nums; }
+          .session-start { font-size:14px; font-weight:700; }
+          .session-end { font-size:12px; color:var(--muted); }
+          .session-rail { width:4px; border-radius:2px; }
+          .session-main { flex:1; min-width:0; }
+          .session-name { font-size:14.5px; font-weight:600; }
+          .session-place { font-size:12.5px; color:var(--muted); }
+        </style>
+      </t>
+    </t>
+  </template>
+
+  <template id="portal_certificates" name="Attestations">
+    <t t-call="school_attendance_qr.portal_shell">
+      <t t-set="page_title">Attestations</t>
+      <t t-set="active_nav">profile</t>
+
+      <header class="topbar">
+        <div class="topbar-row">
+          <a href="/presence/profil" class="icon-btn" aria-label="Retour">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <h1 style="font-size:20px; margin:0;">Mes attestations</h1>
+          <span style="width:40px;"/>
+        </div>
+      </header>
+
+      <div class="page">
+        <t t-if="not certs">
+          <div class="card" style="text-align:center; color:var(--muted); padding:30px;">
+            Aucune attestation émise. Demandez-en une au secrétariat.
+          </div>
+        </t>
+        <t t-foreach="certs" t-as="cert">
+          <a t-attf-href="/web/content/school.attendance.certificate/#{cert.id}/pdf_file/#{cert.pdf_filename}?download=true" class="list-row card" style="padding:14px 16px;">
+            <span class="icon" style="background:var(--bad-soft); color:var(--bad);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2h8l4 4v16H4V2h4z"/><path d="M8 2v4h4"/></svg></span>
+            <div class="main">
+              <div class="title" t-esc="cert.name"/>
+              <div class="sub">Du <t t-esc="cert.date_from.strftime('%d/%m/%Y')"/> au <t t-esc="cert.date_to.strftime('%d/%m/%Y')"/></div>
+            </div>
+            <span style="font-size:12px; color:var(--muted); font-weight:600;">PDF</span>
+          </a>
         </t>
       </div>
     </t>
   </template>
+
 </odoo>

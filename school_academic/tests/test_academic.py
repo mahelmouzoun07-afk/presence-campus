@@ -149,7 +149,7 @@ class TestAcademicPortal(HttpCase):
 
     def test_pages_render_and_documents_are_protected(self):
         self.authenticate('edem.portail', '70707070')
-        for url, text in [('/presence/etudes', 'Mes études'), ('/presence/notes', '13'),
+        for url, text in [('/presence/etudes', 'Mes notes'), ('/presence/notes', '13'),
                           ('/presence/calendrier', 'Calendrier'), ('/presence/documents', 'Cours chimie'),
                           ('/presence', 'Études')]:
             res = self.url_open(url)

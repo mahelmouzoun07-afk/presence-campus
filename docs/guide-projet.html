@@ -1,0 +1,364 @@
+<title>Guide Présence École</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : colonne de lecture + sommaire collant à gauche sur grand écran ; couleurs reprises du portail (bleu nuit, bronze) */
+:root{
+  --bg:#F5F6F3; --surface:#FFFFFF; --ink:#14213D; --muted:#56606F; --line:#DCDFD8;
+  --accent:#8C5A0B; --accent-soft:#F3E9D8; --ok:#2F6B4F; --warn:#9A6B12; --bad:#A23E2D; --code-bg:#EEF0EC;
+  --f-display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --f-body:'Source Sans 3', 'Segoe UI', Roboto, Arial, sans-serif;
+  --f-mono:'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1522; --surface:#172033; --ink:#E7EAF0; --muted:#A3ACBC; --line:#2A3550;
+  --accent:#E0A84A; --accent-soft:#2C2416; --ok:#6CC59A; --warn:#E3B45A; --bad:#EE8A79; --code-bg:#1D2840; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1522; --surface:#172033; --ink:#E7EAF0; --muted:#A3ACBC; --line:#2A3550;
+  --accent:#E0A84A; --accent-soft:#2C2416; --ok:#6CC59A; --warn:#E3B45A; --bad:#EE8A79; --code-bg:#1D2840; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:17px; line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px; margin:0 auto; display:grid; grid-template-columns:240px minmax(0,1fr); gap:48px; padding-block:40px 80px}
+nav.toc{position:sticky; top:calc(env(safe-area-inset-top,0px) + 24px); align-self:start; font-size:14px}
+nav.toc .lbl{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:10px}
+nav.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; counter-reset:t}
+nav.toc a{color:var(--muted); text-decoration:none; display:block; padding:3px 0}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent)}
+main{min-width:0}
+header.hero{border-bottom:2px solid var(--ink); padding-bottom:22px; margin-bottom:8px}
+.eyebrow{font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); font-weight:700}
+h1{font-family:var(--f-display); font-size:clamp(32px,5vw,46px); line-height:1.1; margin:8px 0 10px; text-wrap:balance}
+.lede{font-size:19px; color:var(--muted); max-width:62ch; margin:0}
+.meta{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:16px; font-size:13.5px; color:var(--muted)}
+.meta b{color:var(--ink)}
+section{padding-top:36px}
+h2{font-family:var(--f-display); font-size:28px; line-height:1.2; margin:0 0 12px; text-wrap:balance; scroll-margin-top:24px}
+h3{font-size:19px; margin:26px 0 8px}
+p,li{max-width:68ch}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+code{font-family:var(--f-mono); font-size:.86em; background:var(--code-bg); padding:1px 5px; border-radius:4px}
+.flow{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:16px 0}
+.step{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:14.5px}
+.step .n{font-family:var(--f-mono); font-size:12px; color:var(--accent)}
+.step b{display:block; margin:2px 0}
+.tablewrap{overflow-x:auto; margin:14px 0; border:1px solid var(--line); border-radius:10px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:15px; min-width:560px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-size:12.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+.note{border-left:4px solid var(--accent); background:var(--accent-soft); padding:12px 16px; border-radius:0 8px 8px 0; margin:16px 0; max-width:72ch}
+.note.bad{border-color:var(--bad)}
+.badge{display:inline-block; font-family:var(--f-mono); font-size:12px; font-weight:500; padding:1px 7px; border-radius:20px; border:1px solid currentColor}
+.A{color:var(--ok)} .B{color:var(--accent)} .C{color:var(--warn)} .D{color:var(--ink)}
+.roles{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:14px}
+.role{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; min-width:0}
+.role h3{margin-top:0}
+.role ol{margin:0; padding-left:20px; font-size:15.5px}
+footer{margin-top:56px; padding-top:16px; border-top:1px solid var(--line); font-size:13.5px; color:var(--muted)}
+@media (max-width:860px){ .wrap{grid-template-columns:1fr; gap:20px; padding-block:24px 60px} nav.toc{position:static} nav.toc ol{flex-direction:row; flex-wrap:wrap; gap:4px 14px} }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Sommaire">
+  <div class="lbl">Sommaire</div>
+  <ol>
+    <li><a href="#apercu">Le projet en bref</a></li>
+    <li><a href="#modules">Les quatre modules</a></li>
+    <li><a href="#presence">Confirmer une présence</a></li>
+    <li><a href="#securite">Sécurité et anti-fraude</a></li>
+    <li><a href="#relais">Étudiants sans téléphone</a></li>
+    <li><a href="#horsligne">Hors ligne et application</a></li>
+    <li><a href="#notifs">Notifications</a></li>
+    <li><a href="#etudes">Études : notes, calendrier</a></li>
+    <li><a href="#stages">Stages cliniques</a></li>
+    <li><a href="#roles">Guide par rôle</a></li>
+    <li><a href="#reglages">Réglages</a></li>
+    <li><a href="#infra">Hébergement et sauvegardes</a></li>
+    <li><a href="#limites">Limites à connaître</a></li>
+    <li><a href="#mots">Mots du système</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Documentation · version 12</div>
+  <h1>Présence École : comment ça marche et comment l'utiliser</h1>
+  <p class="lede">Un système de gestion de la présence et de la vie étudiante pour les écoles et universités du Bénin, construit sur Odoo 18. L'étudiant confirme sa présence avec son téléphone : position GPS, Wi-Fi de l'école et empreinte digitale.</p>
+  <div class="meta"><span><b>Logiciel</b> Odoo 18 Community</span><span><b>Modules</b> 4</span><span><b>Tests automatiques</b> 68</span><span><b>Fuseau</b> Africa/Porto-Novo</span></div>
+</header>
+
+<section id="apercu">
+  <h2>Le projet en bref</h2>
+  <p>Le problème de départ : l'appel papier prend du temps, se falsifie facilement (un étudiant signe pour un absent) et ne produit aucune statistique exploitable. Le système remplace l'appel par une confirmation faite par l'étudiant lui-même, sur son téléphone, avec trois preuves vérifiées automatiquement :</p>
+  <ul>
+    <li><b>Où il est</b> : sa position GPS doit être dans le rayon de la salle (30 m par défaut).</li>
+    <li><b>Sur quel réseau</b> : il doit être connecté au Wi-Fi de l'école (réglable).</li>
+    <li><b>Qui il est</b> : il déverrouille son téléphone (empreinte, Face ID ou code). C'est la norme WebAuthn : aucune donnée biométrique ne quitte le téléphone, seule une preuve mathématique est envoyée.</li>
+  </ul>
+  <p>Tout le reste s'appuie sur ces confirmations : tableaux de bord, alertes d'absences, attestations, statistiques, notes, stages.</p>
+</section>
+
+<section id="modules">
+  <h2>Les quatre modules</h2>
+  <p>Le système est découpé en modules Odoo. Chaque école installe ceux dont elle a besoin.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Module</th><th>Contenu</th><th>Pour qui</th></tr></thead>
+    <tbody>
+      <tr><td><code>school_base</code></td><td>Étudiants, enseignants, filières, promotions, cours, salles, emploi du temps, scolarité (paiements)</td><td>Toutes les écoles</td></tr>
+      <tr><td><code>school_attendance_qr</code></td><td>Présence (GPS, Wi-Fi, empreinte), portail étudiant installable, hors ligne, présence relayée, notifications, sécurité, attestations, surveillance du serveur</td><td>Toutes les écoles</td></tr>
+      <tr><td><code>school_academic</code></td><td>Évaluations et notes, moyennes, bulletins PDF, calendrier académique, documents de cours</td><td>Écoles qui gèrent les notes dans le système</td></tr>
+      <tr><td><code>school_internship</code></td><td>Stages cliniques et gardes : double validation, suivi GPS continu, contrôles aux pauses, heures cliniques, relevé</td><td>Facultés de médecine, écoles de santé</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="presence">
+  <h2>Confirmer une présence</h2>
+  <p>Chaque semaine, l'emploi du temps génère automatiquement les <b>séances</b> du jour. Une séance a deux fenêtres : une pour l'entrée (15 minutes après le début) et une pour la sortie (autour de la fin du cours). Confirmer l'entrée ET la sortie empêche l'étudiant de pointer puis de partir.</p>
+  <div class="flow">
+    <div class="step"><span class="n">1</span><b>Ouvrir l'application</b>L'accueil montre le cours en cours, sans rien à scanner.</div>
+    <div class="step"><span class="n">2</span><b>Appuyer sur le bouton</b>« Confirmer mon entrée » ou « ma sortie ».</div>
+    <div class="step"><span class="n">3</span><b>Empreinte</b>Le téléphone demande l'empreinte, Face ID ou le code.</div>
+    <div class="step"><span class="n">4</span><b>Vérifications</b>Position, Wi-Fi, appareil, inscription au cours, horaires.</div>
+    <div class="step"><span class="n">5</span><b>Résultat</b>Validée, à vérifier, ou refusée avec le motif.</div>
+  </div>
+  <p>Les QR codes collés dans les salles restent disponibles (affiches PDF stylées avec le logo de l'école), mais ils ne sont plus nécessaires : le portail trouve tout seul le cours de l'étudiant.</p>
+  <h3>Les trois états d'une présence</h3>
+  <ul>
+    <li><b>Validée</b> : tout est conforme.</li>
+    <li><b>À vérifier</b> : enregistrée, mais un contrôle a levé un doute (position limite, anomalie détectée, scolarité impayée en mode « signaler »). Elle arrive dans « À traiter ».</li>
+    <li><b>Refusée</b> : l'étudiant est hors de la salle, ou une règle bloque (autre appareil, cours non suivi, fenêtre fermée).</li>
+  </ul>
+  <h3>Niveaux de preuve</h3>
+  <p>Chaque présence porte un badge qui dit comment elle a été prouvée :</p>
+  <ul>
+    <li><span class="badge A">A</span> Téléphone de l'étudiant, en temps réel (cas normal).</li>
+    <li><span class="badge B">B</span> Relayée par un responsable (étudiant sans téléphone utilisable).</li>
+    <li><span class="badge C">C</span> Validée hors ligne (Wi-Fi en panne, synchronisée ensuite).</li>
+    <li><span class="badge D">D</span> Double validation : étudiant puis superviseur (stages).</li>
+  </ul>
+</section>
+
+<section id="securite">
+  <h2>Sécurité et anti-fraude</h2>
+  <h3>Le compte de l'étudiant</h3>
+  <ul>
+    <li><b>Connexion</b> : identifiant de l'école + matricule comme premier mot de passe (les mêmes informations que pour le Wi-Fi de l'école).</li>
+    <li><b>Mot de passe obligatoire</b> : à la première connexion, l'étudiant doit choisir un mot de passe personnel (8 caractères minimum, différent du matricule).</li>
+    <li><b>Un seul appareil</b> : le compte est lié au premier téléphone utilisé. Un autre téléphone est refusé tant que le secrétariat n'a pas autorisé le changement.</li>
+    <li><b>5 échecs de connexion d'affilée</b> : le compte est signalé à la direction dans « À traiter ».</li>
+  </ul>
+  <h3>Détections automatiques</h3>
+  <p>Après chaque confirmation, le système cherche des signes de fraude. Il <b>signale</b> sans bloquer, pour qu'un humain tranche :</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Détection</th><th>Ce que ça repère</th></tr></thead>
+    <tbody>
+      <tr><td>Appareil partagé</td><td>Le même téléphone a servi pour plusieurs étudiants en 24 h.</td></tr>
+      <tr><td>GPS identique</td><td>Deux étudiants à la même position exacte : typique d'une application de fausse position.</td></tr>
+      <tr><td>Confirmations groupées</td><td>Plusieurs confirmations en quelques secondes au même endroit : une personne qui pointe pour d'autres.</td></tr>
+      <tr><td>Déplacement impossible</td><td>Vitesse irréaliste depuis la confirmation précédente (plus de 50 km/h par défaut).</td></tr>
+      <tr><td>Hors ligne suspect</td><td>Confirmation « hors ligne » alors que d'autres confirmaient en ligne au même moment.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Journal d'audit non modifiable</h3>
+  <p>Chaque action sensible (présence, refus, relais, réinitialisation, note modifiée après publication, ajustement d'heures de stage) est écrite dans un journal que personne ne peut modifier ni supprimer depuis Odoo. Chaque ligne contient l'empreinte de la précédente : une modification faite directement dans la base casse la chaîne, et le bouton <b>« Vérifier l'intégrité du journal »</b> la détecte.</p>
+  <h3>Double authentification du personnel</h3>
+  <p>En option, le secrétariat, la direction et les enseignants doivent saisir un code en plus du mot de passe (application Google Authenticator, ou code par e-mail).</p>
+</section>
+
+<section id="relais">
+  <h2>Étudiants sans téléphone utilisable</h2>
+  <p>Certains étudiants n'ont pas de téléphone, ou un téléphone trop ancien pour l'empreinte. L'administration les marque <b>« sans téléphone utilisable »</b>. Leur présence est alors confirmée par un responsable (l'enseignant, le délégué, ou les deux selon le réglage) depuis la page <b>« Relayer des présences »</b> :</p>
+  <ol>
+    <li>Le responsable voit <b>uniquement</b> la liste des étudiants marqués « sans téléphone » du cours, jamais toute la classe.</li>
+    <li>L'étudiant tape <b>lui-même</b> son matricule et son identifiant.</li>
+    <li>Le responsable valide avec <b>sa propre</b> empreinte. Sa position et l'heure sont enregistrées.</li>
+  </ol>
+  <p>Garde-fous : un quota de relais par séance (3 par défaut), des contrôles tirés au sort (20 %), un signalement si le même responsable relaie trop souvent le même étudiant, et le <b>comptage des têtes</b> en fin de séance : si le nombre de présents enregistrés dépasse le nombre de personnes comptées dans la salle, les relais sont bloqués et la direction est prévenue.</p>
+  <p>Si un étudiant a un téléphone mais sans code ni empreinte configuré, l'application lui explique comment en activer un (Android : Paramètres › Sécurité ; iPhone : Réglages › Face ID et code).</p>
+</section>
+
+<section id="horsligne">
+  <h2>Application installable et mode hors ligne</h2>
+  <p>Le portail étudiant s'installe sur le téléphone comme une application (icône et nom de l'école), sans passer par les stores. Sur Android, un bouton « Installer l'application » apparaît ; sur iPhone, un guide explique la manipulation dans Safari.</p>
+  <h3>Quand le Wi-Fi de l'école tombe en panne</h3>
+  <ol>
+    <li>Pendant qu'il est en ligne, le téléphone précharge discrètement 3 « défis » (valables 24 h, utilisables une seule fois).</li>
+    <li>Au moment de confirmer, l'application teste le serveur. <b>S'il ne répond pas du tout</b>, c'est une vraie panne : le mode hors ligne s'active. S'il répond « vous n'êtes pas sur le Wi-Fi de l'école », ce n'est pas une panne : la confirmation est refusée normalement.</li>
+    <li>L'empreinte signe un défi sur le téléphone (aucun réseau nécessaire), avec la position GPS. La confirmation est mise en file d'attente.</li>
+    <li>Dès qu'une connexion revient (n'importe quel réseau), la file est envoyée. Le serveur vérifie la signature, l'heure et la position, et la présence reçoit le badge <span class="badge C">C</span>.</li>
+  </ol>
+  <div class="note">La toute première ouverture de l'application doit se faire avec une connexion, et une première confirmation en ligne est nécessaire pour activer le hors ligne. Le plus simple : le faire le jour de l'inscription, à l'école.</div>
+</section>
+
+<section id="notifs">
+  <h2>Notifications</h2>
+  <p>Les notifications arrivent sur le téléphone même application fermée (norme Web Push, sans compte Firebase ni frais), et restent consultables dans l'onglet <b>« Alertes »</b>. Chacun peut couper les rappels et les résultats ; les alertes de sécurité sont toujours envoyées.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Destinataire</th><th>Notifications</th></tr></thead>
+    <tbody>
+      <tr><td>Étudiant</td><td>Rappel avant le cours ; fenêtre qui va se fermer ; absence constatée ; taux de présence trop bas ; compte signalé ou appareil réinitialisé ; rappels de scolarité ; emploi du temps modifié ; nouvelle note ; nouveau document ; échéances du calendrier ; fin de garde oubliée ; contrôle de présence en stage</td></tr>
+      <tr><td>Enseignant</td><td>Rappel avant son cours ; résumé après la séance ; étudiant en absences répétées ; tâche qui lui est assignée</td></tr>
+      <tr><td>Secrétariat</td><td>Nouvelles entrées dans « À traiter » ; anomalies de sécurité ; synthèse quotidienne (en option) ; alertes serveur</td></tr>
+      <tr><td>Direction</td><td>Comptes signalés, comptages incohérents, relais suspects ; synthèse chaque lundi</td></tr>
+      <tr><td>Superviseur de stage</td><td>Garde à valider ; gardes en attente depuis plus de 48 h</td></tr>
+    </tbody>
+  </table></div>
+  <p>Sur iPhone, les notifications n'arrivent que si l'application est installée sur l'écran d'accueil (iOS 16.4 ou plus récent).</p>
+</section>
+
+<section id="etudes">
+  <h2>Études : notes, calendrier, documents</h2>
+  <h3>Évaluations et notes</h3>
+  <ol>
+    <li>L'enseignant crée une évaluation (devoir, partiel, examen…), avec son poids et son barème.</li>
+    <li>« Préparer la liste des étudiants » crée une ligne par inscrit ; il saisit les notes (ou coche « absent »).</li>
+    <li>« Publier les notes » : les étudiants les voient et reçoivent une notification. Toute modification après publication est tracée.</li>
+  </ol>
+  <p>Les moyennes suivent les règles de l'école : barème (sur 20), poids des évaluations, coefficients des cours, absence comptée 0 ou ignorée, nombre de décimales, note de passage. Le système calcule aussi le rang dans la promotion et produit les <b>bulletins PDF</b>.</p>
+  <h3>Calendrier académique</h3>
+  <p>Devoirs, échéances, examens et événements au même endroit, visibles par les étudiants concernés (un cours, une promotion, une filière, ou toute l'école). Les partiels et examens y sont ajoutés automatiquement. Les rappels dépendent de l'importance : 7 jours, 3 jours, 1 jour et 2 heures avant pour un événement important.</p>
+  <h3>Documents de cours</h3>
+  <p>L'enseignant dépose des PDF ou des images. Seuls les étudiants inscrits au cours y ont accès, et ils peuvent les garder sur le téléphone pour les lire sans réseau.</p>
+</section>
+
+<section id="stages">
+  <h2>Stages cliniques</h2>
+  <p>Pour les facultés de médecine : l'étudiant enchaîne des gardes d'horaires variables dans un service hospitalier, et ce qui compte est le total d'heures validées.</p>
+  <h3>Une garde, du début à la fin</h3>
+  <div class="flow">
+    <div class="step"><span class="n">1</span><b>Entrée</b>L'étudiant confirme avec GPS + empreinte, onglet « Stages ».</div>
+    <div class="step"><span class="n">2</span><b>Suivi continu</b>Position envoyée toutes les 5 min tant que la page est ouverte.</div>
+    <div class="step"><span class="n">3</span><b>Contrôles aux pauses</b>Aux heures prévues (ex. 12h, 16h), empreinte + GPS en 30 min.</div>
+    <div class="step"><span class="n">4</span><b>Sortie</b>L'étudiant confirme la fin de garde.</div>
+    <div class="step"><span class="n">5</span><b>Validation</b>Le superviseur valide avec sa propre empreinte, et peut noter la garde.</div>
+  </div>
+  <p>Seules les gardes doublement validées (étudiant puis superviseur, badge <span class="badge D">D</span>) comptent dans les heures. Une barre de progression montre les heures validées sur les heures requises. Tout fonctionne aussi sans réseau (sous-sols, blocs opératoires), pour l'étudiant comme pour le superviseur.</p>
+  <h3>Anomalies signalées dans « À traiter »</h3>
+  <ul>
+    <li>Garde confirmée sur un autre site que celui prévu.</li>
+    <li>Durée invraisemblable (moins de 1 h ou plus de 30 h).</li>
+    <li>Sortie non confirmée après 14 h (rappel envoyé à l'étudiant).</li>
+    <li>Positions hors du site pendant la garde.</li>
+    <li>Contrôle de pause manqué ou confirmé hors du site.</li>
+    <li>Validation du superviseur manquante après 48 h.</li>
+  </ul>
+  <p>À la fin du stage, l'administration valide la période : le <b>relevé d'heures PDF</b> est généré et l'étudiant peut le télécharger. Les heures ne sont modifiables à la main que par l'administration, et chaque ajustement est tracé.</p>
+</section>
+
+<section id="roles">
+  <h2>Guide d'utilisation par rôle</h2>
+  <div class="roles">
+    <div class="role">
+      <h3>Secrétariat / administration</h3>
+      <ol>
+        <li>Créer filières, promotions, cours, salles (coordonnées GPS) et l'emploi du temps.</li>
+        <li>Importer ou créer les étudiants : leur compte est créé automatiquement.</li>
+        <li>Imprimer les affiches QR si besoin (École › Salles).</li>
+        <li>Chaque jour : traiter la boîte <b>« À traiter »</b>.</li>
+        <li>Changement de téléphone : « Réinitialiser l'appareil » sur la fiche étudiant.</li>
+        <li>Mot de passe oublié : « Réinitialiser le mot de passe » (il redevient le matricule).</li>
+        <li>Attestations de présence et bulletins : menus Attestations et Études.</li>
+      </ol>
+    </div>
+    <div class="role">
+      <h3>Enseignant</h3>
+      <ol>
+        <li>Tableau de bord du jour : présents et absents en direct.</li>
+        <li>« Démarrer maintenant » si le cours commence en avance.</li>
+        <li>Relayer les étudiants sans téléphone, puis faire le comptage des têtes.</li>
+        <li>Saisir et publier les notes, déposer les documents, ajouter des échéances.</li>
+      </ol>
+    </div>
+    <div class="role">
+      <h3>Étudiant</h3>
+      <ol>
+        <li>Se connecter (identifiant + matricule), puis choisir son mot de passe.</li>
+        <li>Installer l'application et activer les notifications (onglet Alertes).</li>
+        <li>À chaque cours : « Confirmer mon entrée », puis « ma sortie ».</li>
+        <li>Consulter emploi du temps, absences, notes, calendrier et documents.</li>
+      </ol>
+    </div>
+    <div class="role">
+      <h3>Superviseur de stage</h3>
+      <ol>
+        <li>Menu « Stages cliniques › Gardes à valider ».</li>
+        <li>Pour chaque garde : note facultative (1 à 5), commentaire, puis « Valider avec mon empreinte ».</li>
+        <li>Consulter les gardes, positions et contrôles de ses sites (et seulement les siens).</li>
+      </ol>
+    </div>
+    <div class="role">
+      <h3>Direction</h3>
+      <ol>
+        <li>Recevoir les signalements graves et la synthèse du lundi.</li>
+        <li>Consulter les statistiques : par étudiant, cours, promotion, filière, enseignant.</li>
+        <li>Vérifier l'intégrité du journal d'audit.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section id="reglages">
+  <h2>Réglages principaux</h2>
+  <p>Tout se règle dans <b>Paramètres › École</b>, sans toucher au code.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Réglage</th><th>Valeur par défaut</th></tr></thead>
+    <tbody>
+      <tr><td>Réseaux autorisés (Wi-Fi de l'école)</td><td>Vide = pas de restriction</td></tr>
+      <tr><td>Alerte d'absences répétées</td><td>Sous 70 % à partir de 3 séances</td></tr>
+      <tr><td>Scolarité impayée</td><td>Ne rien faire (ou signaler, ou bloquer)</td></tr>
+      <tr><td>Signalement après échecs de connexion</td><td>5</td></tr>
+      <tr><td>Qui relaie les étudiants sans téléphone</td><td>Enseignant ou délégué</td></tr>
+      <tr><td>Rappel avant le cours</td><td>10 minutes</td></tr>
+      <tr><td>Barème et note de passage</td><td>20 et 10</td></tr>
+      <tr><td>Suivi GPS en stage</td><td>Une position toutes les 5 minutes</td></tr>
+      <tr><td>Alerte disque du serveur</td><td>Sous 15 % d'espace libre</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="infra">
+  <h2>Hébergement, sauvegardes, surveillance</h2>
+  <ul>
+    <li><b>Hébergement</b> : un serveur dans l'école, accessible de l'extérieur par un tunnel Cloudflare avec une adresse fixe par école (ex. <code>iut.presence.bj</code>). Chaque école a sa propre base de données.</li>
+    <li><b>Sans Internet</b> : le serveur de l'école continue de fonctionner sur le réseau local, avec le même nom de domaine et un certificat valide (guide dans <code>outils/INFRA.md</code>).</li>
+    <li><b>Sauvegardes</b> : chaque nuit, chiffrées (AES-256), avec trois copies (serveur, second disque, cloud en option) et une rétention de 7 jours, 4 semaines et 12 mois. Une restauration de test est conseillée chaque trimestre.</li>
+    <li><b>Surveillance</b> : UptimeRobot vérifie toutes les 5 minutes que le serveur répond ; Odoo vérifie chaque heure l'espace disque, la fraîcheur des sauvegardes et les erreurs.</li>
+  </ul>
+  <div class="note bad"><b>Important :</b> sans la phrase secrète des sauvegardes (<code>~/.config/presence/sauvegarde.pass</code>), aucune sauvegarde ne peut être restaurée. Gardez-en une copie hors du serveur.</div>
+</section>
+
+<section id="limites">
+  <h2>Limites à connaître</h2>
+  <ul>
+    <li><b>GPS falsifiable</b> : une application de fausse position peut tromper le GPS. Le système ne peut pas le détecter avec certitude ; il combine GPS, Wi-Fi, empreinte et détections pour rendre la fraude coûteuse et visible.</li>
+    <li><b>Suivi GPS en stage</b> : une application web ne peut pas suivre le GPS écran verrouillé. Les trous de suivi sont comptés, pas traités comme une fraude ; ce sont les contrôles avec empreinte qui prouvent la présence.</li>
+    <li><b>Première ouverture</b> : l'application doit être ouverte une première fois avec une connexion.</li>
+    <li><b>iPhone</b> : les notifications exigent l'installation sur l'écran d'accueil.</li>
+    <li><b>Données personnelles</b> : la localisation des étudiants est une donnée sensible au regard de la loi béninoise (APDP). L'usage doit être expliqué dans la charte et validé par un juriste.</li>
+  </ul>
+</section>
+
+<section id="mots">
+  <h2>Mots du système</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Mot</th><th>Signification</th></tr></thead>
+    <tbody>
+      <tr><td>Séance</td><td>Un cours à une date précise, créé depuis l'emploi du temps.</td></tr>
+      <tr><td>Fenêtre</td><td>Le moment où la confirmation d'entrée ou de sortie est acceptée.</td></tr>
+      <tr><td>À traiter</td><td>La boîte unique où arrive tout ce qui demande une décision humaine.</td></tr>
+      <tr><td>Niveau de preuve</td><td>A, B, C ou D : comment la présence a été prouvée.</td></tr>
+      <tr><td>WebAuthn / passkey</td><td>La vérification par empreinte, Face ID ou code du téléphone.</td></tr>
+      <tr><td>Défi</td><td>Un code à usage unique que l'empreinte signe, utilisé pour le hors ligne.</td></tr>
+      <tr><td>Garde</td><td>Une période de travail en stage, de l'entrée à la sortie.</td></tr>
+      <tr><td>Relais</td><td>Présence confirmée par un responsable pour un étudiant sans téléphone.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>Document du projet Présence École, version 12 (modules school_base 18.0.5, school_attendance_qr 18.0.10, school_academic 18.0.1, school_internship 18.0.1). Le détail technique pour les développeurs est dans le fichier <code>CLAUDE.md</code> du projet.</footer>
+</main>
+</div>

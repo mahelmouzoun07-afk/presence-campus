@@ -1,0 +1,97 @@
+/* Habillage « application » de la page de connexion.
+   Reprend la maquette Demarrage : fond bleu nuit, logo animé, carte blanche. */
+
+body.o_portal {
+  background: var(--ink) !important;
+  color: #fff;
+}
+body.o_portal #wrapwrap {
+  background: var(--ink) !important;
+}
+body.o_portal .o_main_content,
+body.o_portal main {
+  background: transparent !important;
+}
+body.o_portal .container,
+body.o_portal .o_login_container,
+body.o_portal .oe_login_form {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px;
+}
+body.o_portal .card {
+  background: #fff;
+  color: var(--ink);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, .3);
+  padding: 24px 22px;
+}
+body.o_portal label { color: var(--ink); font-weight: 600; font-size: 13px; }
+body.o_portal input[type="text"],
+body.o_portal input[type="password"],
+body.o_portal input[type="email"] {
+  width: 100%; box-sizing: border-box; height: 48px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+  padding: 0 14px; font-size: 14px; margin-top: 4px;
+}
+body.o_portal .btn-primary {
+  width: 100%; height: 50px; border-radius: 14px;
+  background: var(--ink); color: #fff; border: none;
+  font-weight: 600; font-size: 15.5px;
+  box-shadow: 0 10px 30px rgba(140, 90, 11, .25);
+}
+body.o_portal .text-muted,
+body.o_portal .form-text,
+body.o_portal a.btn-link {
+  color: #C4CAD8 !important;
+}
+body.o_portal footer,
+body.o_portal .o_footer_copyright,
+body.o_portal .footer_default,
+body.o_portal #footer {
+  display: none !important;
+}
+body.o_portal .navbar,
+body.o_portal header,
+body.o_portal .o_portal_navbar {
+  display: none !important;
+}
+
+/* Logo animé */
+.splash-brand {
+  text-align: center;
+  padding: 50px 0 20px;
+  color: #fff;
+}
+.splash-brand { position: relative; }
+.splash-ring {
+  position: absolute; left: 50%; top: 50px; width: 110px; height: 110px;
+  margin-left: -55px; border-radius: 32px;
+  border: 2px solid var(--accent);
+  animation: splash-ring 1.8s ease-out infinite;
+}
+.splash-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px; border-radius: 28px;
+  background: var(--accent); color: #fff;
+  font-family: 'Source Serif 4', serif; font-size: 38px; font-weight: 700;
+  animation: splash-rise .7s ease-out both;
+  position: relative; z-index: 1;
+}
+.splash-title { margin-top: 20px; animation: splash-rise .7s .2s ease-out both; }
+.splash-name { font-family: 'Source Serif 4', serif; font-size: 28px; font-weight: 700; }
+.splash-sub { font-size: 14px; color: #C4CAD8; margin-top: 4px; }
+
+@keyframes splash-rise {
+  from { opacity: 0; transform: translateY(14px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes splash-ring {
+  0%   { transform: scale(.9); opacity: .6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-badge, .splash-title, .splash-ring { animation: none; }
+}
