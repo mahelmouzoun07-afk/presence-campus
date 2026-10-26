@@ -102,15 +102,16 @@ class SchoolPwaController(http.Controller):
 
     @http.route('/presence/hors-ligne/defis', type='json', auth='user')
     def offline_challenges(self):
-        student = current_student()
-        if not student or student.must_change_password:
+        Challenge = request.env['school.offline.challenge'].sudo()
+        holder = Challenge.holder_for_user(request.env.user)
+        if not holder or (holder._name == 'school.student' and holder.must_change_password):
             return {'challenges': []}
-        if not student.webauthn_credential_id:
+        if not holder.webauthn_credential_id:
             return {'challenges': [], 'reason': 'Confirmez une première fois en ligne pour activer le hors ligne.'}
-        challenges = request.env['school.offline.challenge'].top_up(student)
+        challenges = Challenge.top_up(holder)
         return {
             'rp_id': request.httprequest.host.split(':')[0],
-            'credential_id': student.webauthn_credential_id,
+            'credential_id': holder.webauthn_credential_id,
             'challenges': [{'id': c.id, 'challenge': c.challenge, 'expires_at': c.expires_at.isoformat() + 'Z'}
                            for c in challenges],
         }
@@ -120,14 +121,12 @@ class SchoolPwaController(http.Controller):
         """Reçoit la file d'attente du téléphone. Chaque élément est vérifié et
         enregistré séparément : une confirmation refusée n'empêche pas les autres."""
         student = current_student()
-        if not student:
-            return {'error': "Aucun profil étudiant associé à ce compte."}
         Record = request.env['school.attendance.record'].sudo()
         results = []
         for item in (items or [])[:20]:
             try:
                 with request.env.cr.savepoint():
-                    res = Record.register_offline(student, item, request.httprequest)
+                    res = Record.sync_offline_item(request.env.user, item, request.httprequest)
                 results.append(dict(res, key=item.get('key'), ok=True))
             except Exception as e:
                 request.env['school.audit.log'].log('presence_refused', f"Hors ligne : {e}", student=student)

@@ -15,6 +15,8 @@ class SchoolAttendanceCertificate(models.Model):
     _order = 'issue_date desc, id desc'
 
     name = fields.Char(string="Référence", readonly=True, default='Nouveau', copy=False)
+    certificate_type = fields.Selection([('presence', 'Attestation de présence')], default='presence',
+                                        required=True, readonly=True, string="Type")
     student_id = fields.Many2one('school.student', required=True, string="Étudiant", ondelete='cascade')
     date_from = fields.Date(string="Du", required=True)
     date_to = fields.Date(string="Au", required=True)
@@ -53,6 +55,12 @@ class SchoolAttendanceCertificate(models.Model):
     def _fmt(self, d):
         return d.strftime('%d/%m/%Y')
 
+    def _pdf_extra(self):
+        """Variantes du document (titre, tableau...) selon le type : surchargé
+        par les autres modules (ex. relevé d'heures de stage). Doit renvoyer
+        (données supplémentaires pour render.build_certificate_pdf, statistiques)."""
+        return {}, self.compute_period_stats(self.student_id.sudo(), self.date_from, self.date_to)
+
     def _build_pdf(self):
         self.ensure_one()
         company = self.env.company
@@ -60,8 +68,10 @@ class SchoolAttendanceCertificate(models.Model):
         logo = style._effective_logo_bytes() if style else (
             base64.b64decode(company.school_logo) if company.school_logo else None)
         student = self.student_id.sudo()
-        stats = self.compute_period_stats(student, self.date_from, self.date_to)
-        pdf = render.build_certificate_pdf({
+        extra, stats = self._pdf_extra()
+        extra = dict(extra)
+        file_prefix = extra.pop('file_prefix', 'Attestation')
+        pdf = render.build_certificate_pdf(dict({
             'school_name': company.name, 'logo_bytes': logo, 'reference': self.name,
             'student_name': student.name, 'matricule': student.matricule,
             'promotion': student.promotion_id.name or '',
@@ -70,11 +80,11 @@ class SchoolAttendanceCertificate(models.Model):
             'expected': stats['expected'], 'attended': stats['attended'], 'rate': stats['rate'], 'rows': stats['rows'],
             'color_1': style.color_1 if style else render.DEFAULT_COLOR_1,
             'color_2': style.color_2 if style else render.DEFAULT_COLOR_2,
-        })
+        }, **extra))
         self.write({
             'expected': stats['expected'], 'attended': stats['attended'], 'rate': stats['rate'],
             'pdf_file': base64.b64encode(pdf),
-            'pdf_filename': f"Attestation-{self.name.replace('/', '-')}-{student.matricule}.pdf",
+            'pdf_filename': f"{file_prefix}-{self.name.replace('/', '-')}-{student.matricule}.pdf",
         })
 
     def action_download(self):

@@ -81,8 +81,8 @@
     box.style.display = 'block';
     var line = document.createElement('div');
     line.className = 'ac-result ' + (r.ok ? (r.state === 'valid' ? 'ac-ok' : 'ac-warn') : 'ac-err');
-    line.textContent = r.ok ? ('Synchronisé : ' + (r.phase === 'checkout' ? 'sortie' : 'entrée') + ' « ' +
-      r.course_name + ' » — validée hors ligne') : ('Confirmation hors ligne refusée : ' + r.error);
+    line.textContent = r.ok ? ('Synchronisé : ' + (r.label || ((r.phase === 'checkout' ? 'sortie' : 'entrée') + ' « ' +
+      r.course_name + ' »')) + ' — validée hors ligne') : ('Confirmation hors ligne refusée : ' + r.error);
     box.appendChild(line);
   }
 
@@ -96,7 +96,10 @@
     });
   }
 
-  function confirmOffline() {
+  /* extra : champs ajoutés à l'élément mis en file (ex. target, attendance_id) ;
+   * opts.gps === false : pas de position (ex. validation par un superviseur). */
+  function confirmOffline(extra, opts) {
+    opts = opts || {};
     var now = new Date();
     return all('challenges').then(function (list) {
       var usable = list.filter(function (c) { return new Date(c.expires_at) > now; });
@@ -105,7 +108,8 @@
           "connexion (et confirmez une première présence en ligne) pour l'activer.");
       }
       var c = usable[0];
-      return getPosition().then(function (pos) {
+      var position = opts.gps === false ? Promise.resolve({ coords: {} }) : getPosition();
+      return position.then(function (pos) {
         return navigator.credentials.get({ publicKey: {
           challenge: SA.b64urlToBuffer(c.challenge), rpId: c.rp_id, userVerification: 'required', timeout: 60000,
           allowCredentials: [{ type: 'public-key', id: SA.b64urlToBuffer(c.credential_id) }],
@@ -120,6 +124,7 @@
               signature: SA.bufferToB64url(cred.response.signature),
             } },
           };
+          Object.assign(item, extra || {});
           return del('challenges', c.id).then(function () { return put('queue', item); });
         }, function (err) { throw SA.explainWebAuthnError(err); });
       });

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Sites -->
+  <record id="view_internship_site_list" model="ir.ui.view">
+    <field name="name">school.internship.site.list</field>
+    <field name="model">school.internship.site</field>
+    <field name="arch" type="xml">
+      <list><field name="name"/><field name="specialty"/><field name="location"/><field name="supervisor_ids" widget="many2many_tags"/></list>
+    </field>
+  </record>
+  <record id="view_internship_site_form" model="ir.ui.view">
+    <field name="name">school.internship.site.form</field>
+    <field name="model">school.internship.site</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <group>
+            <group><field name="name"/><field name="specialty"/><field name="location"/></group>
+            <group><field name="latitude"/><field name="longitude"/><field name="radius_meters"/></group>
+          </group>
+          <field name="supervisor_ids" widget="many2many_tags" placeholder="Superviseurs du site…"/>
+          <p class="text-muted">Les superviseurs doivent avoir un compte de connexion (fiche enseignant) et le
+            groupe « Superviseur de stage » pour valider les gardes.</p>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="action_internship_site" model="ir.actions.act_window">
+    <field name="name">Sites de stage</field><field name="res_model">school.internship.site</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <!-- Périodes -->
+  <record id="view_internship_period_list" model="ir.ui.view">
+    <field name="name">school.internship.period.list</field>
+    <field name="model">school.internship.period</field>
+    <field name="arch" type="xml">
+      <list decoration-success="status == 'validated'" decoration-muted="status == 'done'">
+        <field name="student_id"/><field name="site_id"/><field name="date_start"/><field name="date_end"/>
+        <field name="required_hours"/><field name="validated_hours"/><field name="progress" widget="progressbar"/>
+        <field name="status" widget="badge" decoration-info="status == 'in_progress'" decoration-success="status == 'validated'"/>
+      </list>
+    </field>
+  </record>
+  <record id="view_internship_period_form" model="ir.ui.view">
+    <field name="name">school.internship.period.form</field>
+    <field name="model">school.internship.period</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_mark_done" type="object" string="Marquer terminé" invisible="status != 'in_progress'"
+                  groups="school_base.group_school_admin"/>
+          <button name="action_validate" type="object" string="Valider le stage et générer le relevé" class="btn-primary"
+                  invisible="status == 'validated'" groups="school_base.group_school_admin"
+                  confirm="Le relevé d'heures PDF sera généré et l'étudiant pourra le télécharger. Continuer ?"/>
+          <button name="action_generate_statement" type="object" string="Télécharger le relevé d'heures"
+                  invisible="status != 'validated'"/>
+          <field name="status" widget="statusbar"/>
+        </header>
+        <sheet>
+          <group>
+            <group><field name="student_id"/><field name="site_id"/><field name="date_start"/><field name="date_end"/></group>
+            <group>
+              <field name="required_hours"/><field name="validated_hours"/><field name="pending_hours"/>
+              <field name="progress" widget="progressbar"/>
+              <field name="adjusted_hours" groups="school_base.group_school_admin"/>
+            </group>
+          </group>
+          <field name="attendance_ids" readonly="1">
+            <list decoration-success="is_validated" decoration-warning="checkin_state == 'flagged' or checkout_state == 'flagged'"
+                  decoration-danger="checkin_state == 'rejected' or checkout_state == 'rejected'">
+              <field name="checkin_time"/><field name="checkout_time"/><field name="duration_hours"/>
+              <field name="proof_level" widget="badge"/><field name="supervisor_id"/><field name="is_validated"/>
+              <field name="flag_reason"/>
+              <field name="checkin_state" column_invisible="1"/><field name="checkout_state" column_invisible="1"/>
+            </list>
+          </field>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="action_internship_period" model="ir.actions.act_window">
+    <field name="name">Périodes de stage</field><field name="res_model">school.internship.period</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <!-- Gardes (lecture seule hors administration) -->
+  <record id="view_internship_attendance_list" model="ir.ui.view">
+    <field name="name">school.internship.attendance.list</field>
+    <field name="model">school.internship.attendance</field>
+    <field name="arch" type="xml">
+      <list create="0" decoration-success="is_validated" decoration-danger="checkin_state == 'rejected' or checkout_state == 'rejected'"
+            decoration-warning="checkin_state == 'flagged' or checkout_state == 'flagged'">
+        <field name="student_id"/><field name="site_id"/><field name="checkin_time"/><field name="checkout_time"/>
+        <field name="duration_hours"/>
+        <field name="proof_level" widget="badge" decoration-success="proof_level == 'D'" decoration-warning="proof_level == 'C'"/>
+        <field name="student_confirmed"/><field name="supervisor_confirmed"/><field name="supervisor_id"/>
+        <field name="flag_reason" optional="show"/>
+        <field name="checkin_state" column_invisible="1"/><field name="checkout_state" column_invisible="1"/>
+        <field name="is_validated" column_invisible="1"/>
+      </list>
+    </field>
+  </record>
+  <record id="view_internship_attendance_form" model="ir.ui.view">
+    <field name="name">school.internship.attendance.form</field>
+    <field name="model">school.internship.attendance</field>
+    <field name="arch" type="xml">
+      <form create="0">
+        <sheet>
+          <group>
+            <group string="Entrée">
+              <field name="period_id"/><field name="checkin_time"/><field name="checkin_state"/>
+              <field name="checkin_distance"/><field name="checkin_accuracy"/><field name="checkin_device_id"/>
+            </group>
+            <group string="Sortie">
+              <field name="checkout_time"/><field name="checkout_state"/>
+              <field name="checkout_distance"/><field name="checkout_accuracy"/><field name="duration_hours"/>
+            </group>
+          </group>
+          <group>
+            <group string="Validations">
+              <field name="student_confirmed"/><field name="supervisor_confirmed"/><field name="supervisor_id"/>
+              <field name="supervisor_confirmed_at"/><field name="proof_level"/><field name="offline"/>
+            </group>
+            <group string="Contrôles"><field name="flag_reason"/><field name="is_validated"/></group>
+          </group>
+          <field name="evaluation_ids" readonly="1">
+            <list><field name="supervisor_id"/><field name="rating"/><field name="comment"/></list>
+          </field>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="view_internship_attendance_search" model="ir.ui.view">
+    <field name="name">school.internship.attendance.search</field>
+    <field name="model">school.internship.attendance</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="student_id"/><field name="site_id"/>
+        <filter string="À valider" name="to_validate" domain="[('student_confirmed', '=', True), ('supervisor_confirmed', '=', False)]"/>
+        <filter string="Validées" name="validated" domain="[('is_validated', '=', True)]"/>
+        <filter string="Hors ligne" name="offline" domain="[('offline', '=', True)]"/>
+        <group expand="0" string="Regrouper par">
+          <filter string="Étudiant" name="group_student" context="{'group_by': 'student_id'}"/>
+          <filter string="Site" name="group_site" context="{'group_by': 'site_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+  <record id="action_internship_attendance" model="ir.actions.act_window">
+    <field name="name">Gardes</field><field name="res_model">school.internship.attendance</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <record id="view_internship_evaluation_list" model="ir.ui.view">
+    <field name="name">school.internship.evaluation.list</field>
+    <field name="model">school.internship.evaluation</field>
+    <field name="arch" type="xml">
+      <list create="0"><field name="student_id"/><field name="site_id"/><field name="supervisor_id"/><field name="rating"/><field name="comment"/></list>
+    </field>
+  </record>
+  <record id="action_internship_evaluation" model="ir.actions.act_window">
+    <field name="name">Évaluations de garde</field><field name="res_model">school.internship.evaluation</field>
+    <field name="view_mode">list</field>
+  </record>
+
+  <record id="action_open_supervisor_page" model="ir.actions.act_url">
+    <field name="name">Gardes à valider</field>
+    <field name="url">/presence/stages/validation</field>
+    <field name="target">self</field>
+  </record>
+
+  <!-- Fiche étudiant : heures cliniques -->
+  <record id="view_school_student_form_internship" model="ir.ui.view">
+    <field name="name">school.student.form.internship</field>
+    <field name="model">school.student</field>
+    <field name="inherit_id" ref="school_base.view_school_student_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//notebook" position="inside">
+        <page string="Stages" name="internships">
+          <group><field name="internship_hours"/></group>
+          <field name="internship_period_ids" readonly="1">
+            <list><field name="site_id"/><field name="date_start"/><field name="date_end"/>
+              <field name="required_hours"/><field name="validated_hours"/><field name="status"/></list>
+          </field>
+        </page>
+      </xpath>
+    </field>
+  </record>
+
+  <menuitem id="menu_internship_root" name="Stages cliniques" sequence="11"
+            groups="group_internship_supervisor"/>
+  <menuitem id="menu_internship_validate" name="Gardes à valider" parent="menu_internship_root"
+            action="action_open_supervisor_page" sequence="1"/>
+  <menuitem id="menu_internship_attendance" name="Gardes" parent="menu_internship_root"
+            action="action_internship_attendance" sequence="10"/>
+  <menuitem id="menu_internship_period" name="Périodes de stage" parent="menu_internship_root"
+            action="action_internship_period" sequence="20"/>
+  <menuitem id="menu_internship_evaluation" name="Évaluations" parent="menu_internship_root"
+            action="action_internship_evaluation" sequence="30"/>
+  <menuitem id="menu_internship_site" name="Sites de stage" parent="menu_internship_root"
+            action="action_internship_site" sequence="40"/>
+
+</odoo>

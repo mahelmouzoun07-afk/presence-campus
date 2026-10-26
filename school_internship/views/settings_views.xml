@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="res_config_settings_view_form_internship" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.inherit.internship</field>
+    <field name="model">res.config.settings</field>
+    <field name="inherit_id" ref="school_attendance_qr.res_config_settings_view_form_school"/>
+    <field name="arch" type="xml">
+      <xpath expr="//app[@name='school_attendance_qr']" position="inside">
+        <block title="Stages cliniques">
+          <setting string="Sortie de garde oubliée" help="L'étudiant reçoit un rappel et une tâche arrive dans « À traiter » si sa garde est toujours ouverte après ce délai.">
+            <field name="school_internship_open_reminder_hours"/>
+          </setting>
+          <setting string="Durée de garde crédible" help="En dehors de cet intervalle, la garde est signalée.">
+            <div class="content-group">
+              <div class="row mt8"><label class="col-lg-6" string="Minimum (h)" for="school_internship_min_hours"/><field name="school_internship_min_hours"/></div>
+              <div class="row"><label class="col-lg-6" string="Maximum (h)" for="school_internship_max_hours"/><field name="school_internship_max_hours"/></div>
+            </div>
+          </setting>
+          <setting string="Validation du superviseur" help="Alerte si une garde confirmée par l'étudiant n'est pas validée par un superviseur après ce délai.">
+            <field name="school_internship_validation_delay_hours"/>
+          </setting>
+        </block>
+      </xpath>
+    </field>
+  </record>
+</odoo>

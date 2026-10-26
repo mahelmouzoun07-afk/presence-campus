@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_internship_site_admin,school.internship.site.admin,model_school_internship_site,school_base.group_school_admin,1,1,1,1
+access_internship_site_supervisor,school.internship.site.supervisor,model_school_internship_site,group_internship_supervisor,1,0,0,0
+access_internship_period_admin,school.internship.period.admin,model_school_internship_period,school_base.group_school_admin,1,1,1,1
+access_internship_period_supervisor,school.internship.period.supervisor,model_school_internship_period,group_internship_supervisor,1,0,0,0
+access_internship_attendance_admin,school.internship.attendance.admin,model_school_internship_attendance,school_base.group_school_admin,1,1,1,1
+access_internship_attendance_supervisor,school.internship.attendance.supervisor,model_school_internship_attendance,group_internship_supervisor,1,0,0,0
+access_internship_evaluation_admin,school.internship.evaluation.admin,model_school_internship_evaluation,school_base.group_school_admin,1,1,1,1
+access_internship_evaluation_supervisor,school.internship.evaluation.supervisor,model_school_internship_evaluation,group_internship_supervisor,1,0,0,0

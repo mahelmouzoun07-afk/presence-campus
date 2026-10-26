@@ -8,6 +8,35 @@ from odoo.http import request, content_disposition
 from ..models import webauthn_helper as wa
 
 
+def device_options(holder):
+    """Options WebAuthn pour `holder` (étudiant ou enseignant) : enregistrer
+    une nouvelle clé d'appareil, ou s'authentifier avec celle déjà enregistrée.
+    Partagé par la présence aux cours, les relais et les stages."""
+    holder = holder.sudo()
+    if holder.webauthn_credential_id:
+        return {'mode': 'authenticate', 'options': json.loads(
+            wa.build_authentication_options(request.session, request.httprequest, holder))}
+    return {'mode': 'register', 'options': json.loads(wa.build_registration_options(
+        request.session, request.httprequest, holder, request.env.company.name))}
+
+
+def verify_device(holder, webauthn_mode, webauthn_credential):
+    """Vérifie la réponse WebAuthn de `holder` (et enregistre la clé au premier
+    usage). Renvoie un message d'erreur, ou None si tout est bon."""
+    holder = holder.sudo()
+    credential_json = json.dumps(webauthn_credential)
+    if webauthn_mode == 'register':
+        result, error = wa.verify_registration(request.session, request.httprequest, credential_json)
+        if error:
+            return error
+        wa.store_registration(holder, result)
+        return None
+    if webauthn_mode == 'authenticate':
+        ok, error = wa.verify_authentication(request.session, request.httprequest, holder, credential_json)
+        return None if ok else error
+    return "Vérification de l'appareil manquante."
+
+
 class AttendanceScanController(http.Controller):
 
     def _current_student(self):
@@ -60,14 +89,7 @@ class AttendanceScanController(http.Controller):
         student = self._current_student()
         if not student:
             return {'error': "Aucun profil étudiant associé à ce compte."}
-        company_name = request.env.company.name
-        if student.webauthn_credential_id:
-            return {'mode': 'authenticate',
-                   'options': json.loads(wa.build_authentication_options(
-                       request.session, request.httprequest, student))}
-        return {'mode': 'register',
-               'options': json.loads(wa.build_registration_options(
-                   request.session, request.httprequest, student, company_name))}
+        return device_options(student)
 
     @http.route('/school/attendance/confirm', type='json', auth='user')
     def confirm(self, token, latitude, longitude, device_fingerprint, webauthn_mode, webauthn_credential,
@@ -81,18 +103,9 @@ class AttendanceScanController(http.Controller):
         if student.must_change_password:
             return {'error': "Choisissez d'abord votre mot de passe personnel (menu Profil)."}
 
-        credential_json = json.dumps(webauthn_credential)
-        if webauthn_mode == 'register':
-            result, error = wa.verify_registration(request.session, request.httprequest, credential_json)
-            if error:
-                return {'error': error}
-            wa.store_registration(student, result)
-        elif webauthn_mode == 'authenticate':
-            ok, error = wa.verify_authentication(request.session, request.httprequest, student, credential_json)
-            if not ok:
-                return {'error': error}
-        else:
-            return {'error': "Vérification de l'appareil manquante."}
+        error = verify_device(student, webauthn_mode, webauthn_credential)
+        if error:
+            return {'error': error}
 
         try:
             return request.env['school.attendance.record'].sudo().register_scan(

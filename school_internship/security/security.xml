@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Superviseur de stage : accès limité à SES sites (voir rules.xml), sans les cours -->
+  <record id="group_internship_supervisor" model="res.groups">
+    <field name="name">Superviseur de stage</field>
+    <field name="category_id" ref="school_base.module_category_school"/>
+    <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+  </record>
+  <!-- L'administration voit et gère tous les stages -->
+  <record id="school_base.group_school_admin" model="res.groups">
+    <field name="implied_ids" eval="[(4, ref('group_internship_supervisor'))]"/>
+  </record>
+</odoo>

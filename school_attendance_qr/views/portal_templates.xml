@@ -52,7 +52,7 @@
         </style>
       </t>
       <div class="pp-wrap">
-        <div id="pw_ctx" t-att-data-student="'1' if request.env['school.student'].sudo().search_count([('user_id', '=', request.env.uid)]) else '0'"/>
+        <div id="pw_ctx" t-att-data-student="'1' if request.env['school.offline.challenge'].sudo().holder_for_user(request.env.user) else '0'"/>
         <div id="pw_banner" class="pw-banner"><span class="pw-text"/></div>
         <div style="padding:0 20px;">
           <button type="button" id="pw_offline_confirm" class="btn" style="display:none; width:100%; margin-top:12px; background:var(--ink); color:#fff; border-radius:12px; font-weight:600;">

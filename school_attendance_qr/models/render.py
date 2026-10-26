@@ -251,13 +251,18 @@ def build_poster_pdf(posters):
 def build_certificate_pdf(data):
     """data : {school_name, logo_bytes, reference, student_name, matricule, promotion,
     date_from, date_to, issue_date, expected, attended, rate, rows:[(cours, attendu, present, taux)],
-    city, color_1, color_2}"""
+    city, color_1, color_2}
+
+    Variantes (ex. relevé d'heures de stage) : fournir en plus `title`, `intro`
+    (texte HTML simple), `table` (lignes déjà formatées, en-tête compris, dernière
+    ligne = total), `col_widths` et `footnote`. Sans elles : attestation de présence."""
     buf = io.BytesIO()
     navy = _rl_color(data.get('color_1'), (20, 33, 61))
     gold = _rl_color(data.get('color_2'), (140, 90, 11))
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2.2 * CM, rightMargin=2.2 * CM,
                             topMargin=5.2 * CM, bottomMargin=2.4 * CM,
-                            title="Attestation de présence", author=data.get('school_name') or '')
+                            title=(data.get('title') or "Attestation de présence").capitalize(),
+                            author=data.get('school_name') or '')
 
     h_title = ParagraphStyle('t', fontName='Helvetica-Bold', fontSize=21, textColor=navy, alignment=1, spaceAfter=18)
     body = ParagraphStyle('b', fontName='Helvetica', fontSize=11.5, leading=19, textColor=colors.Color(0.12, 0.13, 0.17))
@@ -297,8 +302,8 @@ def build_certificate_pdf(data):
         pdf.restoreState()
 
     rate = data.get('rate', 0)
-    story = [Paragraph("ATTESTATION DE PRÉSENCE", h_title)]
-    story.append(Paragraph(
+    story = [Paragraph((data.get('title') or "Attestation de présence").upper(), h_title)]
+    story.append(Paragraph(data['intro'], body) if data.get('intro') else Paragraph(
         f"Nous soussignés, <b>{data.get('school_name') or ''}</b>, attestons que l'étudiant(e) "
         f"<b>{data.get('student_name', '')}</b>, matricule <b>{data.get('matricule', '')}</b>"
         + (f", promotion <b>{data['promotion']}</b>" if data.get('promotion') else '')
@@ -307,10 +312,14 @@ def build_certificate_pdf(data):
           f"et le <b>{data.get('date_to', '')}</b>, soit un taux de présence de <b>{rate:.1f} %</b>.", body))
     story.append(Spacer(1, 16))
 
-    rows = [["Cours", "Séances programmées", "Séances présentes", "Taux"]]
-    rows += [[r[0], str(r[1]), str(r[2]), f"{r[3]:.1f} %"] for r in data.get('rows', [])]
-    rows.append(["Total", str(data.get('expected', 0)), str(data.get('attended', 0)), f"{rate:.1f} %"])
-    table = Table(rows, colWidths=[6.4 * CM, 4.6 * CM, 3.6 * CM, 2.0 * CM], repeatRows=1)
+    if data.get('table'):
+        rows = data['table']
+    else:
+        rows = [["Cours", "Séances programmées", "Séances présentes", "Taux"]]
+        rows += [[r[0], str(r[1]), str(r[2]), f"{r[3]:.1f} %"] for r in data.get('rows', [])]
+        rows.append(["Total", str(data.get('expected', 0)), str(data.get('attended', 0)), f"{rate:.1f} %"])
+    table = Table(rows, colWidths=data.get('col_widths') or [6.4 * CM, 4.6 * CM, 3.6 * CM, 2.0 * CM],
+                  repeatRows=1)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), navy), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 9.5),
@@ -322,9 +331,9 @@ def build_certificate_pdf(data):
         ('GRID', (0, 0), (-1, -1), 0.4, colors.Color(0.82, 0.83, 0.8)),
     ]))
     story += [table, Spacer(1, 26)]
-    story.append(Paragraph(
+    story.append(Paragraph(data.get('footnote') or (
         "Une séance est comptée « présente » lorsque l'étudiant a confirmé son entrée par scan du code de la salle, "
-        "avec une position et un appareil vérifiés par le système.", small))
+        "avec une position et un appareil vérifiés par le système."), small))
     story.append(Spacer(1, 30))
     place = (data.get('city') + ', ') if data.get('city') else ''
     story.append(Paragraph(f"Fait à {place}le {data.get('issue_date', '')}", body))

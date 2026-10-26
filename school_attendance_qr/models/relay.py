@@ -10,6 +10,7 @@ PROOF_LEVELS = [
     ('A', "Téléphone de l'étudiant"),
     ('B', "Relayée par un responsable"),
     ('C', "Validée hors ligne"),
+    ('D', "Double validation superviseur"),
 ]
 
 

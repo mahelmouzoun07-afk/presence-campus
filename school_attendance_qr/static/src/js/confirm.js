@@ -110,7 +110,11 @@
     });
   }
 
-  function initConfirmWidget(token, phaseHint) {
+  /* options (facultatif) : confirmUrl (adresse d'envoi, par défaut celle des
+   * cours), params (champs ajoutés à l'envoi), offline (champs ajoutés à une
+   * confirmation hors ligne, ex. {target: 'internship'}). */
+  function initConfirmWidget(token, phaseHint, options) {
+    options = options || {};
     var seal = document.getElementById('ac_seal');
     var result = document.getElementById('ac_result');
     var resultSub = document.getElementById('ac_result_sub');
@@ -142,7 +146,7 @@
       var probe = global.SchoolPwa ? global.SchoolPwa.probe() : Promise.resolve('online');
       probe.then(function (state) {
         if (state === 'offline') {
-          global.SchoolPwa.confirmOffline().then(function () {
+          global.SchoolPwa.confirmOffline(options.offline).then(function () {
             seal.classList.remove('ac-busy');
             stamp('var(--muted)', ICON_CHECK);
             showResult('ac-warn', 'Enregistrée hors ligne', "Le réseau de l'école ne répond pas. Votre confirmation " +
@@ -165,12 +169,12 @@
         return;
       }
       navigator.geolocation.getCurrentPosition(function (pos) {
-        runWebAuthnCeremony().then(function (wa) {
-          return rpcCall('/school/attendance/confirm', {
+        runWebAuthnCeremony(options.optionsUrl).then(function (wa) {
+          return rpcCall(options.confirmUrl || '/school/attendance/confirm', Object.assign({
             token: token, latitude: pos.coords.latitude, longitude: pos.coords.longitude,
             accuracy: pos.coords.accuracy, device_fingerprint: deviceFingerprint(),
             webauthn_mode: wa.mode, webauthn_credential: wa.credential,
-          });
+          }, options.params || {}));
         }).then(function (res) {
           res = res || {};
           seal.classList.remove('ac-busy');

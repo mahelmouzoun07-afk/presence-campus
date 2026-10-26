@@ -1,9 +1,7 @@
-import json
-
 from odoo import http
 from odoo.http import request
 
-from ..models import webauthn_helper as wa
+from .main import device_options, verify_device
 
 
 class SchoolRelayController(http.Controller):
@@ -35,28 +33,13 @@ class SchoolRelayController(http.Controller):
         holder = self._records().relay_holder(request.env.user)
         if not holder:
             return {'error': "Vous n'êtes pas autorisé(e) à relayer des présences."}
-        holder = holder.sudo()
-        if holder.webauthn_credential_id:
-            return {'mode': 'authenticate', 'options': json.loads(
-                wa.build_authentication_options(request.session, request.httprequest, holder))}
-        return {'mode': 'register', 'options': json.loads(wa.build_registration_options(
-            request.session, request.httprequest, holder, request.env.company.name))}
+        return device_options(holder)
 
     def _verify_holder(self, webauthn_mode, webauthn_credential):
-        holder = self._records().relay_holder(request.env.user).sudo()
+        holder = self._records().relay_holder(request.env.user)
         if not holder:
             return "Vous n'êtes pas autorisé(e) à relayer des présences."
-        credential_json = json.dumps(webauthn_credential)
-        if webauthn_mode == 'register':
-            result, error = wa.verify_registration(request.session, request.httprequest, credential_json)
-            if error:
-                return error
-            wa.store_registration(holder, result)
-            return None
-        if webauthn_mode == 'authenticate':
-            ok, error = wa.verify_authentication(request.session, request.httprequest, holder, credential_json)
-            return None if ok else error
-        return "Vérification de l'appareil manquante."
+        return verify_device(holder, webauthn_mode, webauthn_credential)
 
     @http.route('/presence/relais/confirmer', type='json', auth='user')
     def relay_confirm(self, session_id, student_id, matricule, identifiant, latitude, longitude,

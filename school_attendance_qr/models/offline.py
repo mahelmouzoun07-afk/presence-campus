@@ -27,27 +27,77 @@ class SchoolOfflineChallenge(models.Model):
     _description = 'Défi préchargé pour confirmation hors ligne'
     _order = 'issued_at'
 
-    student_id = fields.Many2one('school.student', required=True, ondelete='cascade', index=True)
+    # Le défi appartient à un étudiant, ou à un enseignant (ex. superviseur de
+    # stage qui valide une garde sans réseau) : jamais aux deux.
+    student_id = fields.Many2one('school.student', ondelete='cascade', index=True)
+    teacher_id = fields.Many2one('school.teacher', ondelete='cascade', index=True)
     challenge = fields.Char(required=True, index=True)
     issued_at = fields.Datetime(required=True, default=fields.Datetime.now)
     expires_at = fields.Datetime(required=True)
     used_at = fields.Datetime()
 
+    _sql_constraints = [
+        ('one_holder', 'CHECK((student_id IS NULL) != (teacher_id IS NULL))',
+         "Un défi appartient soit à un étudiant, soit à un enseignant."),
+    ]
+
+    @staticmethod
+    def _holder_field(holder):
+        return 'teacher_id' if holder._name == 'school.teacher' else 'student_id'
+
     @api.model
-    def top_up(self, student):
+    def top_up(self, holder):
         """Complète la réserve du téléphone : au plus N défis valides (3 par
-        défaut), chacun utilisable une seule fois et pendant 24 h."""
+        défaut), chacun utilisable une seule fois et pendant 24 h. `holder` :
+        l'étudiant, ou l'enseignant qui porte la clé d'appareil."""
+        field = self._holder_field(holder)
         now = fields.Datetime.now()
-        self.sudo().search([('student_id', '=', student.id), ('expires_at', '<', now - timedelta(days=7))]).unlink()
-        valid = self.sudo().search([('student_id', '=', student.id), ('used_at', '=', False),
-                                    ('expires_at', '>', now)])
+        self.sudo().search([(field, '=', holder.id), ('expires_at', '<', now - timedelta(days=7))]).unlink()
+        valid = self.sudo().search([(field, '=', holder.id), ('used_at', '=', False), ('expires_at', '>', now)])
         wanted = icp_int(self.env, 'offline_max', 3) - len(valid)
         hours = icp_int(self.env, 'offline_validity_hours', 24)
         if wanted > 0:
             valid |= self.sudo().create([{
-                'student_id': student.id, 'challenge': _b64url(secrets.token_bytes(32)),
+                field: holder.id, 'challenge': _b64url(secrets.token_bytes(32)),
                 'issued_at': now, 'expires_at': now + timedelta(hours=hours)} for _i in range(wanted)])
         return valid
+
+    @api.model
+    def holder_for_user(self, user):
+        """Qui porte la clé d'appareil de cet utilisateur pour le hors ligne :
+        son profil étudiant. D'autres modules (stages) y ajoutent les enseignants."""
+        return self.env['school.student'].sudo().search([('user_id', '=', user.id)], limit=1)
+
+    @api.model
+    def consume(self, holder, item, httprequest):
+        """Vérifie un défi signé hors ligne (appartenance, usage unique, heure
+        annoncée plausible) puis la signature WebAuthn, et le marque utilisé.
+        Renvoie l'heure de la confirmation (UTC). Partagé par toutes les
+        confirmations hors ligne : cours, stages, validation superviseur."""
+        field = self._holder_field(holder)
+        challenge = self.sudo().search([('id', '=', int(item.get('challenge_id') or 0)),
+                                        (field, '=', holder.id)], limit=1)
+        if not challenge:
+            raise ValidationError(_("Défi hors ligne inconnu."))
+        if challenge.used_at:
+            raise ValidationError(_("Cette confirmation hors ligne a déjà été envoyée."))
+        try:
+            captured = datetime.fromisoformat(str(item['captured_at']).replace('Z', '+00:00'))
+            captured = captured.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0)
+        except (KeyError, ValueError):
+            raise ValidationError(_("Heure de confirmation illisible."))
+        now = fields.Datetime.now()
+        # L'horloge du téléphone n'est pas fiable : l'heure annoncée doit tomber
+        # entre la création du défi et sa date d'expiration, et pas dans le futur.
+        if not (challenge.issued_at - timedelta(minutes=2) <= captured <= min(challenge.expires_at, now)
+                + timedelta(minutes=2)):
+            raise ValidationError(_("Heure de confirmation incohérente avec la validité du défi."))
+        raw_challenge = base64.urlsafe_b64decode(challenge.challenge + '=' * (-len(challenge.challenge) % 4))
+        ok, error = wa.verify_assertion(httprequest, holder, json.dumps(item.get('credential') or {}), raw_challenge)
+        if not ok:
+            raise ValidationError(error)
+        challenge.used_at = now
+        return captured
 
 
 class SchoolAttendanceRecordOffline(models.Model):
@@ -71,32 +121,20 @@ class SchoolAttendanceRecordOffline(models.Model):
         return sessions.browse(), False
 
     @api.model
+    def sync_offline_item(self, user, item, httprequest):
+        """Aiguillage de la file d'attente hors ligne selon `item['target']`.
+        Ici : les cours (cible par défaut). Les autres modules (stages)
+        surchargent cette méthode pour leurs propres cibles."""
+        student = self.env['school.student'].sudo().search([('user_id', '=', user.id)], limit=1)
+        if not student:
+            raise ValidationError(_("Aucun profil étudiant associé à ce compte."))
+        return self.register_offline(student, item, httprequest)
+
+    @api.model
     def register_offline(self, student, item, httprequest):
         """Vérifie et enregistre UNE confirmation faite hors ligne."""
-        Challenge = self.env['school.offline.challenge'].sudo()
-        challenge = Challenge.search([('id', '=', int(item.get('challenge_id') or 0)),
-                                      ('student_id', '=', student.id)], limit=1)
-        if not challenge:
-            raise ValidationError(_("Défi hors ligne inconnu."))
-        if challenge.used_at:
-            raise ValidationError(_("Cette confirmation hors ligne a déjà été envoyée."))
-        try:
-            captured = datetime.fromisoformat(str(item['captured_at']).replace('Z', '+00:00'))
-            captured = captured.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0)
-        except (KeyError, ValueError):
-            raise ValidationError(_("Heure de confirmation illisible."))
+        captured = self.env['school.offline.challenge'].consume(student, item, httprequest)
         now = fields.Datetime.now()
-        # L'horloge du téléphone n'est pas fiable : l'heure annoncée doit tomber
-        # entre la création du défi et sa date d'expiration, et pas dans le futur.
-        if not (challenge.issued_at - timedelta(minutes=2) <= captured <= min(challenge.expires_at, now)
-                + timedelta(minutes=2)):
-            raise ValidationError(_("Heure de confirmation incohérente avec la validité du défi."))
-
-        raw_challenge = base64.urlsafe_b64decode(challenge.challenge + '=' * (-len(challenge.challenge) % 4))
-        ok, error = wa.verify_assertion(httprequest, student, json.dumps(item.get('credential') or {}), raw_challenge)
-        if not ok:
-            raise ValidationError(error)
-        challenge.used_at = now
 
         session, phase = self._find_session_at(student, captured)
         if not session:

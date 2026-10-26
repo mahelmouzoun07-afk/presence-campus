@@ -3,7 +3,7 @@
 # (presence_test), jamais sur la base réelle de l'école.
 # Usage : bash ~/odoo-custom-addons/outils/lancer-tests.sh [modules]
 set -euo pipefail
-MODULES="${1:-school_base,school_attendance_qr,school_academic}"
+MODULES="${1:-school_base,school_attendance_qr,school_academic,school_internship}"
 DB=presence_test
 cd ~/odoo
 if ! psql -lqt | cut -d'|' -f1 | grep -qw "$DB"; then createdb "$DB"; fi
