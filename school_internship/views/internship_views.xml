@@ -19,6 +19,9 @@
             <group><field name="name"/><field name="specialty"/><field name="location"/></group>
             <group><field name="latitude"/><field name="longitude"/><field name="radius_meters"/></group>
           </group>
+          <group string="Contrôles de présence pendant la garde">
+            <field name="check_times" placeholder="12:00, 16:00"/><field name="check_window_minutes"/>
+          </group>
           <field name="supervisor_ids" widget="many2many_tags" placeholder="Superviseurs du site…"/>
           <p class="text-muted">Les superviseurs doivent avoir un compte de connexion (fiche enseignant) et le
             groupe « Superviseur de stage » pour valider les gardes.</p>
@@ -123,8 +126,29 @@
               <field name="student_confirmed"/><field name="supervisor_confirmed"/><field name="supervisor_id"/>
               <field name="supervisor_confirmed_at"/><field name="proof_level"/><field name="offline"/>
             </group>
-            <group string="Contrôles"><field name="flag_reason"/><field name="is_validated"/></group>
+            <group string="Contrôles">
+              <field name="flag_reason"/><field name="is_validated"/>
+              <field name="tracking_inside_pct" widget="progressbar"/><field name="tracking_gaps"/>
+              <field name="checks_missed"/><field name="last_position_at"/>
+            </group>
           </group>
+          <notebook>
+            <page string="Contrôles de présence" name="checks">
+              <field name="check_ids" readonly="1">
+                <list decoration-success="state == 'done'" decoration-danger="state in ('missed', 'outside')">
+                  <field name="due_at"/><field name="deadline"/><field name="state"/><field name="confirmed_at"/>
+                  <field name="distance_meters"/><field name="offline"/>
+                </list>
+              </field>
+            </page>
+            <page string="Positions GPS" name="positions">
+              <field name="position_ids" readonly="1">
+                <list decoration-danger="not inside"><field name="recorded_at"/><field name="distance_meters"/>
+                  <field name="accuracy"/><field name="inside"/></list>
+              </field>
+            </page>
+          </notebook>
+          <separator string="Évaluation"/>
           <field name="evaluation_ids" readonly="1">
             <list><field name="supervisor_id"/><field name="rating"/><field name="comment"/></list>
           </field>

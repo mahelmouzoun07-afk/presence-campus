@@ -10,4 +10,15 @@
     <field name="interval_type">hours</field>
     <field name="active">True</field>
   </record>
+
+  <record id="ir_cron_internship_tracking" model="ir.cron">
+    <field name="name">École : stages — contrôles de présence aux heures de pause</field>
+    <field name="model_id" ref="model_school_internship_attendance"/>
+    <field name="state">code</field>
+    <field name="code">model._cron_tracking()</field>
+    <field name="user_id" ref="base.user_root"/>
+    <field name="interval_number">5</field>
+    <field name="interval_type">minutes</field>
+    <field name="active">True</field>
+  </record>
 </odoo>

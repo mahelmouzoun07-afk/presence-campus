@@ -3,6 +3,7 @@ from . import period
 from . import attendance
 from . import evaluation
 from . import anomalies
+from . import tracking
 from . import offline
 from . import certificate
 from . import config_settings

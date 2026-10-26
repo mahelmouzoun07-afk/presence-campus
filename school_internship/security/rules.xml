@@ -53,4 +53,29 @@
     <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
     <field name="domain_force">[(1, '=', 1)]</field>
   </record>
+
+  <record id="rule_position_supervisor" model="ir.rule">
+    <field name="name">Positions de garde : superviseur, ses sites</field>
+    <field name="model_id" ref="model_school_internship_position"/>
+    <field name="groups" eval="[(4, ref('group_internship_supervisor'))]"/>
+    <field name="domain_force">[('attendance_id.site_id.supervisor_ids.user_id', '=', user.id)]</field>
+  </record>
+  <record id="rule_position_admin" model="ir.rule">
+    <field name="name">Positions de garde : administration, toutes</field>
+    <field name="model_id" ref="model_school_internship_position"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
+  <record id="rule_check_supervisor" model="ir.rule">
+    <field name="name">Contrôles de garde : superviseur, ses sites</field>
+    <field name="model_id" ref="model_school_internship_check"/>
+    <field name="groups" eval="[(4, ref('group_internship_supervisor'))]"/>
+    <field name="domain_force">[('site_id.supervisor_ids.user_id', '=', user.id)]</field>
+  </record>
+  <record id="rule_check_admin" model="ir.rule">
+    <field name="name">Contrôles de garde : administration, tous</field>
+    <field name="model_id" ref="model_school_internship_check"/>
+    <field name="groups" eval="[(4, ref('school_base.group_school_admin'))]"/>
+    <field name="domain_force">[(1, '=', 1)]</field>
+  </record>
 </odoo>

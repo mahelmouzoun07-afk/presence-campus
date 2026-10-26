@@ -16,6 +16,13 @@
               <div class="row"><label class="col-lg-6" string="Maximum (h)" for="school_internship_max_hours"/><field name="school_internship_max_hours"/></div>
             </div>
           </setting>
+          <setting string="Suivi GPS continu pendant la garde" help="Tant que l'application est ouverte, le téléphone envoie sa position régulièrement. Plusieurs positions hors du site déclenchent un signalement.">
+            <div class="content-group">
+              <div class="row mt8"><label class="col-lg-7" string="Une position toutes les (min)" for="school_internship_ping_minutes"/><field name="school_internship_ping_minutes"/></div>
+              <div class="row"><label class="col-lg-7" string="Suivi interrompu au-delà de (min)" for="school_internship_gap_minutes"/><field name="school_internship_gap_minutes"/></div>
+              <div class="row"><label class="col-lg-7" string="Signaler après N positions hors site" for="school_internship_outside_points"/><field name="school_internship_outside_points"/></div>
+            </div>
+          </setting>
           <setting string="Validation du superviseur" help="Alerte si une garde confirmée par l'étudiant n'est pas validée par un superviseur après ce délai.">
             <field name="school_internship_validation_delay_hours"/>
           </setting>

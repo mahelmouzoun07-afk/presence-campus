@@ -232,3 +232,82 @@ class TestInternshipPortal(HttpCase):
         page = self.url_open('/presence/stages/validation')
         self.assertIn('Koami Stage', page.text)
         self.assertIn('Valider avec mon empreinte', page.text)
+
+
+class TestContinuousTracking(InternshipCase):
+
+    def _now_local_hhmm(self, minutes_ago=0):
+        local = self.env['school.attendance.session'].fmt_local(
+            fields.Datetime.now() - timedelta(minutes=minutes_ago), '%H:%M')
+        return local
+
+    def _point(self, minutes_ago, pos=CHU):
+        at = fields.Datetime.now() - timedelta(minutes=minutes_ago)
+        return {'at': at.isoformat() + 'Z', 'latitude': pos[0], 'longitude': pos[1], 'accuracy': 10}
+
+    def test_positions_inside_and_leaving_the_site(self):
+        self.scan(at=fields.Datetime.now() - timedelta(hours=2))
+        shift = self.period.open_shift()
+        res = shift.record_positions([self._point(100), self._point(95), self._point(90)])
+        self.assertEqual((res['saved'], res['outside']), (3, 0))
+        self.assertEqual(shift.tracking_inside_pct, 100)
+        shift.record_positions([self._point(30, CLINIQUE), self._point(25, CLINIQUE), self._point(20, CLINIQUE)])
+        self.assertTrue(shift.outside_alert_sent)
+        self.assertIn('hors du site', shift.flag_reason)
+        self.assertTrue(self.env['school.attendance.task'].search_count([('task_type', '=', 'internship_tracking')]))
+        self.assertEqual(shift.tracking_inside_pct, 50)
+        self.assertGreaterEqual(shift.tracking_gaps, 1)  # trou de 60 min entre 90 et 30 min
+
+    def test_positions_with_impossible_time_are_ignored(self):
+        self.scan(at=fields.Datetime.now() - timedelta(hours=1))
+        shift = self.period.open_shift()
+        self.assertEqual(shift.record_positions([self._point(300)])['saved'], 0)  # avant l'entrée
+
+    def test_break_check_confirmed_then_missed(self):
+        self.site.check_times = self._now_local_hhmm(minutes_ago=5)
+        self.scan(at=fields.Datetime.now() - timedelta(hours=3))
+        shift = self.period.open_shift()
+        self.Shift._cron_tracking()
+        self.assertEqual(len(shift.check_ids), 1)
+        self.assertTrue(shift.pending_check())
+        self.assertTrue(self.env['school.notification'].search_count([
+            ('user_id', '=', self.student.user_id.id), ('title', '=', 'Contrôle de présence')]))
+        self.Shift._cron_tracking()
+        self.assertEqual(len(shift.check_ids), 1)  # pas de doublon
+        self.assertEqual(shift.confirm_check(CHU[0], CHU[1], 10)['state'], 'done')
+
+        shift.check_ids.unlink()
+        self.Shift._cron_tracking()
+        shift.check_ids.deadline = fields.Datetime.now() - timedelta(minutes=1)
+        self.Shift._cron_tracking()
+        self.assertEqual(shift.check_ids.state, 'missed')
+        self.assertEqual(shift.checks_missed, 1)
+        self.assertTrue(self.env['school.attendance.task'].search_count([('task_type', '=', 'internship_check')]))
+
+    def test_break_check_outside_site_is_flagged(self):
+        self.site.check_times = self._now_local_hhmm(minutes_ago=2)
+        self.scan(at=fields.Datetime.now() - timedelta(hours=1))
+        shift = self.period.open_shift()
+        self.Shift._cron_tracking()
+        self.assertEqual(shift.confirm_check(CLINIQUE[0], CLINIQUE[1], 10)['state'], 'outside')
+        self.assertTrue(self.env['school.attendance.task'].search_count([('task_type', '=', 'internship_check')]))
+
+    def test_no_check_before_shift_start(self):
+        self.site.check_times = self._now_local_hhmm(minutes_ago=5)
+        self.scan()  # garde commencée APRÈS l'heure du contrôle
+        self.Shift._cron_tracking()
+        self.assertFalse(self.period.open_shift().check_ids)
+
+
+class TestTrackingOffline(TestInternshipOffline):
+
+    def test_break_check_confirmed_offline(self):
+        self.site.check_times = self.env['school.attendance.session'].fmt_local(
+            fields.Datetime.now() - timedelta(minutes=5), '%H:%M')
+        self.scan(at=fields.Datetime.now() - timedelta(hours=2))
+        self.Shift._cron_tracking()
+        item = self._item(self.student, self.phone, {'target': 'internship_check', 'latitude': CHU[0],
+                                                     'longitude': CHU[1], 'accuracy': 10})
+        res = self.Record.sync_offline_item(self.student.user_id, item, self.req)
+        self.assertEqual(res['state'], 'done')
+        self.assertTrue(self.period.open_shift().check_ids.offline)

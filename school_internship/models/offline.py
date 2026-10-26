@@ -48,4 +48,15 @@ class SchoolAttendanceRecordInternshipSync(models.Model):
                 raise ValidationError(_("Garde introuvable."))
             return shift.validate_by_supervisor(teacher, item.get('rating'), item.get('comment'),
                                                 at=captured, offline=True)
+        if target == 'internship_check':
+            student = self.env['school.student'].sudo().search([('user_id', '=', user.id)], limit=1)
+            if not student:
+                raise ValidationError(_("Aucun profil étudiant associé à ce compte."))
+            captured = Challenge.consume(student, item, httprequest)
+            shift = Shift.search([('student_id', '=', student.id), ('checkin_time', '<=', captured),
+                                  '|', ('checkout_time', '=', False), ('checkout_time', '>=', captured)], limit=1)
+            if not shift:
+                raise ValidationError(_("Aucune garde en cours à l'heure de ce contrôle."))
+            return shift.confirm_check(item.get('latitude') or 0, item.get('longitude') or 0,
+                                       item.get('accuracy') or 0, at=captured, offline=True)
         return super().sync_offline_item(user, item, httprequest)
