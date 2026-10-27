@@ -90,6 +90,7 @@ Les téléphones exigent une adresse **HTTPS** pour l'empreinte et l'installatio
 |---|---|
 | [Installation](docs/INSTALLATION.md) | Prérequis, installation pas à pas, premiers réglages, tests |
 | [Utilisation](docs/UTILISATION.md) | Guide par rôle : secrétariat, enseignant, étudiant, superviseur, direction |
+| [Démonstration](docs/DEMONSTRATION.md) | Préparer une base de démo en une commande et dérouler 15 minutes devant un client |
 | [Versions](docs/VERSIONS.md) | Historique v9 à v12, **comment installer et utiliser chaque version** |
 | [Infrastructure](outils/INFRA.md) | Sauvegardes chiffrées, surveillance, tunnel nommé, mode sans Internet |
 | [Guide complet](docs/guide-projet.html) | Fonctionnement détaillé du système |
