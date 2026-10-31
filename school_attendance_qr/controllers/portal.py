@@ -252,4 +252,5 @@ class SchoolPortalController(http.Controller):
             return response
         return request.render('school_attendance_qr.portal_absences', {
             'student': student, 'missed': student.missed_sessions(), 'fmt_date': _format_date_fr,
+            'rate_label': f"{student.attendance_rate:.1f} % de présence",
         })

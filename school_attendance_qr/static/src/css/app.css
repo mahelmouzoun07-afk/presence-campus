@@ -3,7 +3,9 @@
 
 :root {
   --bg:#F3F4F1; --surface:#FFFFFF; --surface-2:#FAFBF8;
-  --ink:#14213D; --ink-soft:#2A3652; --muted:#56606F; --muted-soft:#7B8392;
+  --ink:#14213D; --ink-soft:#2A3652;
+  --muted:#56606F; --muted-soft:#7B8392;
+  --night:#14213D; /* fond bleu nuit (en-têtes, boutons) : reste sombre dans les deux thèmes */
   --line:#E3E5E0; --line-soft:#EEF0EC;
   --accent:#8C5A0B; --accent-soft:#F3E9D8;
   --ok:#2F6B4F; --ok-soft:#E3EFE8;
@@ -17,7 +19,7 @@
 }
 [data-theme="dark"], :root[data-theme="dark"] {
   --bg:#0E1422; --surface:#172033; --surface-2:#1C2740;
-  --ink:#F2F4F8; --ink-soft:#C9D0DE; --muted:#9AA3B8; --muted-soft:#7B8392;
+  --ink:#F2F4F8; --ink-soft:#C9D0DE; --night:#22304D; --muted:#9AA3B8; --muted-soft:#7B8392;
   --line:#2A3550; --line-soft:#1F293F;
   --accent:#E0A84A; --accent-soft:#3A2A10;
   --ok:#6CC59A; --ok-soft:#1E3A2A;
@@ -31,7 +33,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg:#0E1422; --surface:#172033; --surface-2:#1C2740;
-    --ink:#F2F4F8; --ink-soft:#C9D0DE; --muted:#9AA3B8; --muted-soft:#7B8392;
+    --ink:#F2F4F8; --ink-soft:#C9D0DE; --night:#22304D; --muted:#9AA3B8; --muted-soft:#7B8392;
     --line:#2A3550; --line-soft:#1F293F;
     --accent:#E0A84A; --accent-soft:#3A2A10;
     --ok:#6CC59A; --ok-soft:#1E3A2A;
@@ -72,7 +74,7 @@ h1, h2, h3, h4 { font-family: 'Source Serif 4', Georgia, serif; margin: 0; lette
 
 /* en-tête bleu nuit */
 .topbar {
-  background: var(--ink); color: #fff;
+  background: var(--night); color: #fff;
   padding: 36px 20px 48px;
   display: flex; flex-direction: column; gap: 14px;
 }
@@ -126,7 +128,7 @@ h1, h2, h3, h4 { font-family: 'Source Serif 4', Georgia, serif; margin: 0; lette
 .btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 52px; padding: 0 20px; border-radius: 14px; border: none;
-  background: var(--ink); color: #fff; font-weight: 600; font-size: 15.5px;
+  background: var(--night); color: #fff; font-weight: 600; font-size: 15.5px;
   width: 100%; cursor: pointer;
 }
 .btn-primary.danger { background: var(--bad); }
@@ -188,7 +190,7 @@ h1, h2, h3, h4 { font-family: 'Source Serif 4', Georgia, serif; margin: 0; lette
 /* bouton de confirmation (page confirmation.*) */
 .ac-seal {
   width: 176px; height: 176px; border-radius: 88px; margin: 10px auto;
-  background: var(--ink); color: #fff; border: none;
+  background: var(--night); color: #fff; border: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   font-weight: 600; font-size: 15px; cursor: pointer; user-select: none; padding: 0 20px;
   --state-color: var(--ok);

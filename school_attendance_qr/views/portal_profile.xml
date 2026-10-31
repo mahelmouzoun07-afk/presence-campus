@@ -8,7 +8,7 @@
       <t t-set="page_title">Moi</t>
       <t t-set="active_nav">profile</t>
 
-      <header class="topbar" style="padding-bottom:30px; align-items:center; flex-direction:row; gap:14px;">
+      <header class="topbar" style="padding-bottom:56px; align-items:center; flex-direction:row; gap:14px;">
         <div style="width:62px; height:62px; border-radius:31px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Source Serif 4',serif; font-size:22px; font-weight:700; flex:none;">
           <t t-esc="(student.prenom or ' ')[0]"/><t t-esc="(student.nom or ' ')[0]"/>
         </div>

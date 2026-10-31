@@ -57,7 +57,9 @@ else:
     Session = env['school.attendance.session']
     Session.create({'course_id': anat.id, 'teacher_id': teacher.id, 'room_id': room.id,
                     'time_start': fields.Datetime.now() - timedelta(minutes=3), 'duration_minutes': 120})
+    # « date » ne se déduit pas de time_start : la renseigner, sinon la séance compte pour aujourd'hui
     Session.create({'course_id': hyg.id, 'teacher_id': teacher.id, 'room_id': room.id,
+                    'date': date.today() + timedelta(days=1),
                     'time_start': fields.Datetime.now() + timedelta(days=1), 'duration_minutes': 90})
 
     # --- notes et calendrier --------------------------------------------------
