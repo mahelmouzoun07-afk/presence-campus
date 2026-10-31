@@ -9,7 +9,7 @@
 (function () {
   'use strict';
   var KEY = 'presence-stage-positions';
-  var SA, P, box, last = null, wakeLock = null;
+  var SA, P, box, zones = [], last = null, wakeLock = null;
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
   function save(list) { try { localStorage.setItem(KEY, JSON.stringify(list.slice(-500))); } catch (e) { /* plein */ } }
@@ -42,8 +42,8 @@
   function startTracking(minutes) {
     if (!navigator.geolocation) { status("Localisation indisponible sur ce téléphone.", 'var(--brick)'); return; }
     navigator.geolocation.watchPosition(function (pos) {
-      last = { at: new Date().toISOString(), latitude: pos.coords.latitude, longitude: pos.coords.longitude,
-               accuracy: pos.coords.accuracy };
+      // hors du site : seul « hors zone » et l'heure partent, jamais la position
+      last = Object.assign({ at: new Date().toISOString() }, SA.minimizePosition(pos.coords, zones).send);
     }, function () {
       status("Autorisez la localisation : elle est vérifiée pendant toute la garde.", 'var(--brick)');
     }, { enableHighAccuracy: true, maximumAge: 60000 });
@@ -68,7 +68,7 @@
       btn.disabled = true; show('', 'Vérification…');
       P.probe().then(function (state) {
         if (state === 'offline') {
-          return P.confirmOffline({ target: 'internship_check' }).then(function () {
+          return P.confirmOffline({ target: 'internship_check' }, { zones: zones, place: 'du site de stage' }).then(function () {
             show('ac-warn', 'Contrôle enregistré hors ligne : envoyé et vérifié au retour du réseau.');
             btn.style.display = 'none';
           });
@@ -79,9 +79,8 @@
           }, { enableHighAccuracy: true, timeout: 20000 });
         }).then(function (pos) {
           return SA.runWebAuthnCeremony().then(function (wa) {
-            return SA.rpcCall('/presence/stages/controle', {
-              latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy,
-              webauthn_mode: wa.mode, webauthn_credential: wa.credential });
+            return SA.rpcCall('/presence/stages/controle', Object.assign({
+              webauthn_mode: wa.mode, webauthn_credential: wa.credential }, SA.minimizePosition(pos.coords, zones).send));
           });
         }).then(function (res) {
           res = res || {};
@@ -98,6 +97,7 @@
     SA = window.SchoolAttendance; P = window.SchoolPwa;
     box = document.getElementById('tr_box');
     if (!box) return;
+    try { zones = JSON.parse(box.dataset.zones || '[]'); } catch (e) { zones = []; }
     startTracking(parseInt(box.dataset.minutes || '5', 10));
     initCheck();
   });

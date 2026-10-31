@@ -44,6 +44,7 @@
             </t>
             <t t-foreach="item['students']" t-as="st">
               <div class="rl-row" t-att-data-session="session.id" t-att-data-student="st.id"
+                   t-att-data-zone="'%s,%s,%s' % (session.room_id.latitude, session.room_id.longitude, session.room_id.radius_meters)"
                    style="border-top:1px solid var(--line-soft); padding-top:10px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                   <div style="font-size:14px; font-weight:600;" t-esc="st.name"/>

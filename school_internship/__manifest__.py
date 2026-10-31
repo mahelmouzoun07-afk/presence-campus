@@ -1,6 +1,6 @@
 {
     'name': 'School Internship',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.1.0',
     'summary': "Stages cliniques et gardes : double validation superviseur, heures cliniques, relevé",
     'category': 'Education',
     'depends': ['school_attendance_qr'],

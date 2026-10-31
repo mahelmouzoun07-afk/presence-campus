@@ -15,7 +15,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 from . import webauthn_helper as wa
-from .helpers import icp_int
+from .helpers import gps_float, icp_int, zone_of
 
 
 def _b64url(data):
@@ -61,6 +61,22 @@ class SchoolOfflineChallenge(models.Model):
                 field: holder.id, 'challenge': _b64url(secrets.token_bytes(32)),
                 'issued_at': now, 'expires_at': now + timedelta(hours=hours)} for _i in range(wanted)])
         return valid
+
+    @api.model
+    def offline_zones(self, holder):
+        """Zones (salles, sites de stage) où `holder` peut avoir à confirmer
+        d'ici l'expiration des défis. Le téléphone les garde pour décider seul,
+        même sans réseau, si sa position peut être transmise : hors de toutes
+        ces zones, elle ne quitte jamais le téléphone. Ce ne sont pas des
+        secrets : les QR sont collés dans les salles."""
+        if holder._name != 'school.student':
+            return []
+        now = fields.Datetime.now()
+        sessions = self.env['school.attendance.session'].sudo().search([
+            ('course_id', 'in', holder.course_ids.ids),
+            ('time_start', '>=', now - timedelta(hours=8)),
+            ('time_start', '<=', now + timedelta(hours=icp_int(self.env, 'offline_validity_hours', 24) + 2))])
+        return [zone_of(room) for room in sessions.mapped('room_id') if room.latitude or room.longitude]
 
     @api.model
     def holder_for_user(self, user):
@@ -142,7 +158,7 @@ class SchoolAttendanceRecordOffline(models.Model):
         if student not in session.course_id.student_ids:
             raise ValidationError(_("Vous n'êtes pas inscrit à ce cours."))
         payment_reason = self._payment_policy_check(student)
-        lat, lon = float(item.get('latitude') or 0), float(item.get('longitude') or 0)
+        lat, lon = gps_float(item.get('latitude')), gps_float(item.get('longitude'))
         accuracy = max(float(item.get('accuracy') or 0), 0.0)
         fingerprint = item.get('device_fingerprint') or 'hors-ligne'
         self._check_device_binding(student, fingerprint)

@@ -100,6 +100,8 @@ class SchoolInternshipAttendance(models.Model):
     @api.model
     def _site_at(self, latitude, longitude, accuracy, exclude=None):
         Record = self.env['school.attendance.record'].sudo()
+        if latitude is None or longitude is None:  # hors de tous les sites : position non transmise
+            return self.env['school.internship.site']
         for site in self.env['school.internship.site'].sudo().search([('id', '!=', exclude.id if exclude else 0)]):
             if site.latitude or site.longitude:
                 if Record._evaluate_distance(site, latitude, longitude, accuracy)[1] != 'rejected':

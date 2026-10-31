@@ -1,6 +1,7 @@
 from odoo import http
 from odoo.http import request
 
+from ..models.helpers import gps_float
 from .main import device_options, verify_device
 
 
@@ -52,7 +53,7 @@ class SchoolRelayController(http.Controller):
             return self._records().register_relay(
                 env['school.attendance.session'].sudo().browse(int(session_id)),
                 env['school.student'].sudo().browse(int(student_id)),
-                matricule, identifiant, float(latitude), float(longitude), accuracy, env.user)
+                matricule, identifiant, gps_float(latitude), gps_float(longitude), accuracy, env.user)
         except Exception as e:
             return {'error': str(e)}
 

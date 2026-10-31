@@ -114,6 +114,7 @@ class SchoolPwaController(http.Controller):
             'credential_id': holder.webauthn_credential_id,
             'challenges': [{'id': c.id, 'challenge': c.challenge, 'expires_at': c.expires_at.isoformat() + 'Z'}
                            for c in challenges],
+            'zones': Challenge.offline_zones(holder),
         }
 
     @http.route('/presence/hors-ligne/synchroniser', type='json', auth='user')

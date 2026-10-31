@@ -25,6 +25,46 @@
     return fp;
   }
 
+  /* Même formule que le serveur (_haversine_meters) : distance en mètres. */
+  function haversine(lat1, lon1, lat2, lon2) {
+    var R = 6371000, rad = Math.PI / 180;
+    var dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  /* Minimisation des données : la position ne quitte le téléphone que si
+   * elle tombe dans une des zones prévues (salle, site de stage), avec la
+   * même tolérance que le serveur (rayon + précision du GPS). Sinon on
+   * n'envoie que « hors zone » (latitude/longitude nulles) : le serveur ne
+   * saura jamais où était l'étudiant. Une position transmise est toujours
+   * revérifiée par le serveur : modifier ce calcul ne permet pas de tricher.
+   * Renvoie {send: champs à transmettre, outside: bool, distance: m (local)}. */
+  function minimizePosition(coords, zones) {
+    var acc = Math.max(coords.accuracy || 0, 0), nearest = null, inside = false;
+    (zones || []).forEach(function (z) {
+      var d = haversine(z.lat, z.lng, coords.latitude, coords.longitude);
+      if (nearest === null || d < nearest) nearest = d;
+      if (d <= z.radius + acc) inside = true;
+    });
+    if (inside) {
+      return { outside: false, distance: nearest,
+               send: { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy } };
+    }
+    return { outside: true, distance: nearest, send: { latitude: null, longitude: null, accuracy: coords.accuracy } };
+  }
+
+  function distanceLabel(m) {
+    if (m === null || m === undefined) return '';
+    return m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(m) + ' m';
+  }
+
+  function outsideMessage(zoneCheck, place) {
+    var where = zoneCheck.distance !== null ? 'Vous êtes à ' + distanceLabel(zoneCheck.distance) + ' ' + (place || 'de la salle') + '. ' : '';
+    return where + 'Votre position, vérifiée sur votre téléphone, n\'a pas été transmise.';
+  }
+
   function rpcCall(url, params) {
     return fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -112,7 +152,8 @@
 
   /* options (facultatif) : confirmUrl (adresse d'envoi, par défaut celle des
    * cours), params (champs ajoutés à l'envoi), offline (champs ajoutés à une
-   * confirmation hors ligne, ex. {target: 'internship'}). */
+   * confirmation hors ligne, ex. {target: 'internship'}), zones (salles ou
+   * sites où la position peut être transmise), place (« de la salle »…). */
   function initConfirmWidget(token, phaseHint, options) {
     options = options || {};
     var seal = document.getElementById('ac_seal');
@@ -146,7 +187,7 @@
       var probe = global.SchoolPwa ? global.SchoolPwa.probe() : Promise.resolve('online');
       probe.then(function (state) {
         if (state === 'offline') {
-          global.SchoolPwa.confirmOffline(options.offline).then(function () {
+          global.SchoolPwa.confirmOffline(options.offline, { zones: options.zones }).then(function () {
             seal.classList.remove('ac-busy');
             stamp('var(--muted)', ICON_CHECK);
             showResult('ac-warn', 'Enregistrée hors ligne', "Le réseau de l'école ne répond pas. Votre confirmation " +
@@ -169,13 +210,14 @@
         return;
       }
       navigator.geolocation.getCurrentPosition(function (pos) {
+        var zoneCheck = minimizePosition(pos.coords, options.zones);
         runWebAuthnCeremony(options.optionsUrl).then(function (wa) {
           return rpcCall(options.confirmUrl || '/school/attendance/confirm', Object.assign({
-            token: token, latitude: pos.coords.latitude, longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy, device_fingerprint: deviceFingerprint(),
+            token: token, device_fingerprint: deviceFingerprint(),
             webauthn_mode: wa.mode, webauthn_credential: wa.credential,
-          }, options.params || {}));
+          }, zoneCheck.send, options.params || {}));
         }).then(function (res) {
+          if (res && zoneCheck.outside && res.state === 'rejected') res.flag_reason = outsideMessage(zoneCheck, options.place);
           res = res || {};
           seal.classList.remove('ac-busy');
           var isCheckout = res.phase === 'checkout';
@@ -200,6 +242,6 @@
   global.SchoolAttendance = {
     initConfirmWidget: initConfirmWidget, runWebAuthnCeremony: runWebAuthnCeremony, rpcCall: rpcCall,
     b64urlToBuffer: b64urlToBuffer, bufferToB64url: bufferToB64url, deviceFingerprint: deviceFingerprint,
-    explainWebAuthnError: explainWebAuthnError,
+    explainWebAuthnError: explainWebAuthnError, minimizePosition: minimizePosition, outsideMessage: outsideMessage,
   };
 })(window);

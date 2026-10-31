@@ -9,6 +9,9 @@ class ResConfigSettings(models.TransientModel):
                                   config_parameter='school_attendance_qr.timezone')
     school_campus_ip_ranges = fields.Char(string="Réseaux autorisés (Wi-Fi de l'école)",
                                           config_parameter='school_attendance_qr.campus_ip_ranges')
+    school_gps_retention_days = fields.Integer(
+        string="Conservation des positions GPS (jours)", default=30,
+        config_parameter='school_attendance_qr.gps_retention_days')
     school_payment_policy = fields.Selection([
         ('off', "Ne rien faire (par défaut)"),
         ('flag', "Signaler : la présence est enregistrée mais mise « à vérifier »"),

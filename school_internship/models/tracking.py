@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-from odoo.addons.school_attendance_qr.models.helpers import icp, icp_int, local_time
+from odoo.addons.school_attendance_qr.models.helpers import gps_float, icp, icp_int, local_time
 
 
 def _parse_times(raw):
@@ -43,6 +43,25 @@ class SchoolInternshipSiteTracking(models.Model):
         for rec in self:
             if rec.check_times and not _parse_times(rec.check_times):
                 raise ValidationError(_("Heures de contrôle illisibles : écrivez par exemple « 12:00, 16:00 »."))
+
+
+class SchoolAttendanceRecordPurgeInternship(models.Model):
+    _inherit = 'school.attendance.record'
+
+    @api.model
+    def _purge_gps_before(self, limit):
+        count = super()._purge_gps_before(limit)
+        Shift = self.env['school.internship.attendance'].sudo()
+        checkins = Shift.search([('checkin_time', '<', limit),
+                                 '|', ('checkin_lat', '!=', False), ('checkin_lng', '!=', False)])
+        checkins.write({'checkin_lat': False, 'checkin_lng': False})
+        checkouts = Shift.search([('checkout_time', '<', limit),
+                                  '|', ('checkout_lat', '!=', False), ('checkout_lng', '!=', False)])
+        checkouts.write({'checkout_lat': False, 'checkout_lng': False})
+        points = self.env['school.internship.position'].sudo().search([
+            ('recorded_at', '<', limit), '|', ('latitude', '!=', False), ('longitude', '!=', False)])
+        points.write({'latitude': False, 'longitude': False})
+        return count + len(checkins | checkouts) + len(points)
 
 
 class SchoolInternshipPosition(models.Model):
@@ -114,7 +133,8 @@ class SchoolInternshipAttendanceTracking(models.Model):
             try:
                 at = datetime.fromisoformat(str(p['at']).replace('Z', '+00:00')).astimezone(ZoneInfo('UTC'))
                 at = at.replace(tzinfo=None, microsecond=0)
-                lat, lon, acc = float(p['latitude']), float(p['longitude']), max(float(p.get('accuracy') or 0), 0)
+                lat, lon = gps_float(p.get('latitude')), gps_float(p.get('longitude'))
+                acc = max(float(p.get('accuracy') or 0), 0)
             except (KeyError, TypeError, ValueError):
                 continue
             if not (shift.checkin_time <= at <= now + timedelta(minutes=2)):
@@ -150,13 +170,13 @@ class SchoolInternshipAttendanceTracking(models.Model):
         if not check:
             raise ValidationError(_("Aucun contrôle de présence en attente à cette heure-là."))
         Record = self.env['school.attendance.record'].sudo()
-        distance, state, _reason = Record._evaluate_distance(shift.site_id, float(latitude), float(longitude),
+        distance, state, _reason = Record._evaluate_distance(shift.site_id, gps_float(latitude), gps_float(longitude),
                                                              max(float(accuracy or 0), 0))
         check.write({'state': 'outside' if state == 'rejected' else 'done', 'confirmed_at': at,
                      'distance_meters': distance, 'offline': offline})
         if state == 'rejected':
-            self._check_failed(check, f"Contrôle de {local_time(self.env, check.due_at)} confirmé hors du site "
-                                      f"({int(distance)} m)")
+            where = f"({int(distance)} m)" if distance else "(position non transmise)"
+            self._check_failed(check, f"Contrôle de {local_time(self.env, check.due_at)} confirmé hors du site {where}")
         self.env['school.audit.log'].log(
             'internship', f"Contrôle de présence de {local_time(self.env, check.due_at)} : "
                           f"{dict(check._fields['state'].selection)[check.state]}{' (hors ligne)' if offline else ''}.",

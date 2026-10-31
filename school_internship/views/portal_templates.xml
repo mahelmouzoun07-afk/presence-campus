@@ -37,7 +37,7 @@
         </t>
 
         <t t-if="period">
-          <section class="card spotlight" style="background:var(--ink); color:#fff; display:flex; flex-direction:column; gap:12px;">
+          <section class="card spotlight" style="background:var(--night); color:#fff; display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <t t-if="shift">
@@ -58,14 +58,24 @@
                 </t>
               </div>
             </div>
-            <div id="tr_box" t-att-data-minutes="ping_minutes" style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#9ED3B5;">
+            <div id="tr_box" t-att-data-minutes="ping_minutes" t-att-data-zones="zones_json" style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#9ED3B5;">
               <span class="dot ok live-dot"/>
               <span id="tr_status">Démarrage du suivi GPS…</span>
             </div>
-            <a href="/presence/confirmer-stage" class="btn-primary" style="background:#fff; color:var(--ink);">
-              <t t-esc="'Terminer ma garde' if shift else 'Confirmer mon entrée'"/>
-            </a>
+            <button type="button" id="ac_seal" class="btn-primary" style="background:#fff; color:var(--ink);">
+              <span class="ac-seal-label"><t t-esc="'Confirmer ma sortie' if shift else 'Confirmer mon entrée'"/></span>
+            </button>
+            <p id="ac_result" class="ac-result" style="display:none;"/>
+            <p id="ac_result_sub" class="ac-result-sub" style="display:none;"/>
           </section>
+          <script type="text/javascript">
+            document.addEventListener('DOMContentLoaded', function () {
+              SchoolAttendance.initConfirmWidget('', '<t t-esc="phase_hint"/>', {
+                confirmUrl: '/presence/stages/confirmer', offline: { target: 'internship' },
+                zones: <t t-out="zones_json"/>, place: 'du site de stage',
+              });
+            });
+          </script>
 
           <section class="card" style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:baseline;">

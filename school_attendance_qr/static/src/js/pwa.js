@@ -47,9 +47,20 @@
   }
 
   /* ------------------------------------------------ défis et synchronisation */
+  /* Salles et sites où l'étudiant peut avoir à confirmer (reçus avec les défis) :
+   * hors ligne, c'est avec eux que le téléphone décide seul si sa position
+   * peut être transmise. */
+  var ZONES_KEY = 'presence-zones';
+  function storedZones() {
+    try { return JSON.parse(localStorage.getItem(ZONES_KEY) || '[]'); } catch (e) { return []; }
+  }
+
   function refreshChallenges() {
     return SA.rpcCall('/presence/hors-ligne/defis', {}).then(function (res) {
       if (!res || !res.challenges) return;
+      if (res.zones) {
+        try { localStorage.setItem(ZONES_KEY, JSON.stringify(res.zones)); } catch (e) { /* stockage plein */ }
+      }
       return clear('challenges').then(function () {
         return Promise.all(res.challenges.map(function (c) {
           return put('challenges', { id: c.id, challenge: c.challenge, expires_at: c.expires_at,
@@ -97,7 +108,10 @@
   }
 
   /* extra : champs ajoutés à l'élément mis en file (ex. target, attendance_id) ;
-   * opts.gps === false : pas de position (ex. validation par un superviseur). */
+   * opts.gps === false : pas de position (ex. validation par un superviseur) ;
+   * opts.zones : zones de la page (sinon, celles reçues avec les défis). Hors
+   * de toute zone, rien n'est mis en file : le défi n'est pas consommé et la
+   * position ne quitte pas le téléphone. */
   function confirmOffline(extra, opts) {
     opts = opts || {};
     var now = new Date();
@@ -110,13 +124,19 @@
       var c = usable[0];
       var position = opts.gps === false ? Promise.resolve({ coords: {} }) : getPosition();
       return position.then(function (pos) {
+        var coords = {};
+        if (opts.gps !== false) {
+          var zoneCheck = SA.minimizePosition(pos.coords, opts.zones && opts.zones.length ? opts.zones : storedZones());
+          if (zoneCheck.outside) throw new Error(SA.outsideMessage(zoneCheck, opts.place || 'de la zone prévue'));
+          coords = zoneCheck.send;
+        }
         return navigator.credentials.get({ publicKey: {
           challenge: SA.b64urlToBuffer(c.challenge), rpId: c.rp_id, userVerification: 'required', timeout: 60000,
           allowCredentials: [{ type: 'public-key', id: SA.b64urlToBuffer(c.credential_id) }],
         } }).then(function (cred) {
           var item = {
             key: 'k' + Date.now(), challenge_id: c.id, captured_at: new Date().toISOString(),
-            latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy,
+            latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy,
             device_fingerprint: SA.deviceFingerprint(),
             credential: { id: cred.id, rawId: SA.bufferToB64url(cred.rawId), type: cred.type, response: {
               clientDataJSON: SA.bufferToB64url(cred.response.clientDataJSON),

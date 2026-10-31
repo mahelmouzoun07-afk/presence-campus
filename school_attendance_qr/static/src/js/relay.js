@@ -35,13 +35,15 @@
       submit.disabled = true;
       setMsg(msg, '', 'Vérification en cours…');
       getPosition().then(function (pos) {
+        // position du responsable : transmise seulement s'il est dans la salle
+        var z = (row.dataset.zone || '').split(',').map(Number);
+        var zoneCheck = SA.minimizePosition(pos.coords, z.length === 3 ? [{ lat: z[0], lng: z[1], radius: z[2] }] : []);
         return SA.runWebAuthnCeremony('/presence/relais/options').then(function (wa) {
-          return SA.rpcCall('/presence/relais/confirmer', {
+          return SA.rpcCall('/presence/relais/confirmer', Object.assign({
             session_id: row.dataset.session, student_id: row.dataset.student,
             matricule: matricule, identifiant: identifiant,
-            latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy,
             webauthn_mode: wa.mode, webauthn_credential: wa.credential,
-          });
+          }, zoneCheck.send));
         });
       }).then(function (res) {
         res = res || {};

@@ -18,6 +18,9 @@
             <setting string="Réseaux autorisés" help="Adresses IP ou plages (séparées par des virgules) du Wi-Fi de l'école. Laissez vide pour ne rien restreindre.">
               <field name="school_campus_ip_ranges" placeholder="41.138.1.0/24"/>
             </setting>
+            <setting string="Conservation des positions GPS" help="Passé ce délai (en jours), les coordonnées GPS sont effacées ; la distance et l'état de la présence restent. 0 = ne jamais effacer. Hors de la salle, la position n'est de toute façon jamais transmise.">
+              <field name="school_gps_retention_days"/>
+            </setting>
           </block>
           <block title="Alertes d'absences">
             <setting string="Seuil d'alerte" help="Un étudiant passe dans « À traiter » quand son taux de présence tombe sous ce seuil.">

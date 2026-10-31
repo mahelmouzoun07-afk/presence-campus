@@ -62,12 +62,14 @@ cd ~/odoo && source venv/bin/activate
 - Après toute modif de code, relancer avec `-u school_base,school_attendance_qr,school_academic`
   pour forcer la relecture des fichiers.
 - Tests automatiques (base séparée `presence_test`, jamais la vraie) :
-  `bash ~/odoo-custom-addons/outils/lancer-tests.sh` — 48 tests. Les tests ne doivent
+  `bash ~/odoo-custom-addons/outils/lancer-tests.sh` — 78 tests. Les tests ne doivent
   pas dépendre des données déjà présentes dans `presence_test` (noms uniques).
 - Paquet Python supplémentaire : `pywebpush` (notifications push), installé dans le venv.
 - Infra (sauvegardes, surveillance, tunnel nommé, mode hybride) : `outils/INFRA.md`.
-- Tunnel de test rapide : `cloudflared tunnel --url http://localhost:8069`, puis mettre
-  à jour `web.base.url` dans Paramètres → Technique → Paramètres système.
+- Adresse de test fixe : Tailscale Funnel (dans WSL) `https://mahel.tail88ed56.ts.net` → port 8069
+  (`tailscale funnel status`). Funnel envoie X-Forwarded-For : l'IP réelle arrive via `--proxy-mode`.
+- Ancien tunnel de test rapide : `cloudflared tunnel --url http://localhost:8069` (adresse qui change),
+  puis mettre à jour `web.base.url` dans Paramètres → Technique → Paramètres système.
 
 ## Fonctionnalités codées (v12)
 
@@ -94,6 +96,13 @@ cd ~/odoo && source venv/bin/activate
 - Infra : `outils/sauvegarde.sh` (testé : sauvegarde + restauration), `/presence/sante`,
   surveillance horaire (disque, sauvegardes, erreurs).
 - Heures du portail : toujours via `fmt_local` / `local_time` (Odoo stocke en UTC).
+- Vie privée GPS : le téléphone vérifie lui-même la zone (`minimizePosition` dans confirm.js, zones
+  de la page ou reçues avec les défis hors ligne via `offline_zones`) ; hors zone il envoie
+  latitude/longitude nulles (`gps_float` → None → refus « position non transmise »). Une position
+  transmise est TOUJOURS revérifiée par le serveur. Effacement après `gps_retention_days` (30 j).
+- IP client : `helpers.client_ip()` = `remote_addr` (corrigé par `--proxy-mode`), jamais le
+  premier maillon de X-Forwarded-For (falsifiable).
+- Changer un script du portail → monter `VERSION` dans `sw.js` (cache des téléphones).
 
 ## Reste à faire (hors code ou à décider)
 

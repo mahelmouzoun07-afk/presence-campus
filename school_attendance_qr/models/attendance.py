@@ -313,7 +313,12 @@ class SchoolAttendanceRecord(models.Model):
 
     def _evaluate_distance(self, room, latitude, longitude, accuracy):
         """Renvoie (distance, state, reason) pour un scan, qu'il s'agisse
-        de l'entrée ou de la sortie : même règle de tolérance GPS."""
+        de l'entrée ou de la sortie : même règle de tolérance GPS.
+        Position absente (None) : le téléphone a constaté lui-même qu'il était
+        hors zone et ne l'a pas transmise. Un « non » n'a pas besoin d'être
+        vérifié ; un « oui », lui, l'est toujours ici avec la vraie position."""
+        if latitude is None or longitude is None:
+            return 0.0, 'rejected', "Hors zone (vérifié sur le téléphone, position non transmise)"
         distance = _haversine_meters(room.latitude, room.longitude, latitude, longitude)
         if distance > room.radius_meters + accuracy:
             return distance, 'rejected', f"Hors zone ({int(distance)} m de la salle)"
@@ -498,6 +503,31 @@ class SchoolAttendanceRecord(models.Model):
             'phase': 'checkout', 'state': record.checkout_state, 'flag_reason': record.checkout_flag_reason,
             'course_name': session.course_id.name,
         }
+
+    # ------------------------------------------- conservation des positions
+    @api.model
+    def _cron_purge_gps(self):
+        """Durée de conservation limitée (minimisation des données, loi APDP) :
+        passé le délai réglé, les coordonnées GPS sont effacées. Distance, état
+        et motif restent : ils suffisent pour l'historique et les attestations."""
+        days = icp_int(self.env, 'gps_retention_days', 30)
+        if days <= 0:
+            return 0
+        return self._purge_gps_before(fields.Datetime.now() - timedelta(days=days))
+
+    @api.model
+    def _purge_gps_before(self, limit):
+        """Efface les coordonnées enregistrées avant `limit`. Les autres modules
+        (stages) l'étendent à leurs propres positions. Renvoie le nombre
+        d'enregistrements nettoyés."""
+        Record = self.sudo()
+        checkins = Record.search([('scan_datetime', '<', limit),
+                                  '|', ('latitude', '!=', False), ('longitude', '!=', False)])
+        checkins.write({'latitude': False, 'longitude': False})
+        checkouts = Record.search([('checkout_scan_datetime', '<', limit),
+                                   '|', ('checkout_latitude', '!=', False), ('checkout_longitude', '!=', False)])
+        checkouts.write({'checkout_latitude': False, 'checkout_longitude': False})
+        return len(checkins | checkouts)
 
     # ------------------------------------------------- détections de fraude
     def _flag(self, phase, reason):

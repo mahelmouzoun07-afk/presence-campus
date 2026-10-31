@@ -67,7 +67,9 @@
           </section>
           <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function () {
-              SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>');
+              SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>', {
+                zones: [{ lat: <t t-esc="session.room_id.latitude"/>, lng: <t t-esc="session.room_id.longitude"/>, radius: <t t-esc="session.room_id.radius_meters"/> }],
+              });
             });
           </script>
         </t>

@@ -1,11 +1,12 @@
 import base64
+import json
 
 from odoo import http
 from odoo.http import content_disposition, request
 
 from odoo.addons.school_attendance_qr.controllers.main import device_options, verify_device
 from odoo.addons.school_attendance_qr.controllers.portal import portal_gate
-from odoo.addons.school_attendance_qr.models.helpers import icp_int
+from odoo.addons.school_attendance_qr.models.helpers import gps_float, icp_int, zone_of
 
 
 class SchoolInternshipPortal(http.Controller):
@@ -28,6 +29,9 @@ class SchoolInternshipPortal(http.Controller):
             'phase_hint': 'checkout' if shift else 'checkin', 'active_nav': 'internships',
             'check': shift.pending_check() if shift else False,
             'ping_minutes': icp_int(request.env, 'internship_ping_minutes', 5),
+            # sites de stage seulement : hors de ces zones, la position reste sur le téléphone
+            'zones_json': json.dumps([zone_of(site) for site in request.env['school.internship.site'].sudo().search([])
+                                      if site.latitude or site.longitude]),
         })
 
     @http.route('/presence/stages/confirmer', type='json', auth='user')
@@ -43,7 +47,7 @@ class SchoolInternshipPortal(http.Controller):
             return {'error': error}
         try:
             return self._shifts().register_student_scan(
-                student, float(latitude), float(longitude), device_fingerprint, accuracy)
+                student, gps_float(latitude), gps_float(longitude), device_fingerprint, accuracy)
         except Exception as e:
             request.env['school.audit.log'].log('internship', f"Garde refusée : {e}", student=student)
             return {'error': str(e)}

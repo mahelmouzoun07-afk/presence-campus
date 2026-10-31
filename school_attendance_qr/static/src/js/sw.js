@@ -10,7 +10,7 @@
  * - Notifications push : affichées même application fermée. */
 'use strict';
 
-var VERSION = 'presence-v12-1';
+var VERSION = 'presence-v12-2';
 var PAGES = VERSION + '-pages';
 var ASSETS = VERSION + '-assets';
 var DOCS = 'presence-documents';  // documents gardés hors ligne à la demande (indépendant des versions)

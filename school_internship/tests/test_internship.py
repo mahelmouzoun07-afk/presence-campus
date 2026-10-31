@@ -108,7 +108,8 @@ class TestShifts(InternshipCase):
         shift.sudo().write({'checkout_time': fields.Datetime.now()})
         shift.validate_by_supervisor(self.sup)
         self.assertFalse(self.env['school.attendance.task'].search_count([
-            ('task_type', '=', 'internship_unvalidated'), ('state', '=', 'open')]))
+            ('task_type', '=', 'internship_unvalidated'), ('state', '=', 'open'),
+            ('internship_attendance_id', '=', shift.id)]))
 
     def test_only_admin_adjusts_hours(self):
         with self.assertRaises(AccessError):
@@ -313,3 +314,37 @@ class TestTrackingOffline(TestInternshipOffline):
         res = self.Record.sync_offline_item(self.student.user_id, item, self.req)
         self.assertEqual(res['state'], 'done')
         self.assertTrue(self.period.open_shift().check_ids.offline)
+
+
+class TestInternshipGpsPrivacy(InternshipCase):
+    """Hors de tout site, le téléphone n'envoie aucune position (None)."""
+
+    def test_scan_without_position_is_rejected_and_stores_nothing(self):
+        res = self.Shift.register_student_scan(self.student, None, None, f'dev-{self.student.id}', 10)
+        self.assertEqual(res['state'], 'rejected')
+        shift = self.period.attendance_ids
+        self.assertFalse(shift.checkin_lat or shift.checkin_lng)
+        self.assertIn('non transmise', shift.flag_reason)
+
+    def test_positions_outside_are_counted_without_coordinates(self):
+        self.scan(at=fields.Datetime.now() - timedelta(hours=1))
+        shift = self.period.open_shift()
+        at = (fields.Datetime.now() - timedelta(minutes=10)).isoformat() + 'Z'
+        res = shift.record_positions([{'at': at, 'latitude': None, 'longitude': None, 'accuracy': 12}])
+        self.assertEqual((res['saved'], res['outside']), (1, 1))
+        point = shift.position_ids
+        self.assertFalse(point.inside)
+        self.assertFalse(point.latitude or point.longitude)
+
+    def test_purge_clears_old_shift_coordinates(self):
+        shift = self.full_shift(hours=12)
+        shift.position_ids.create({'attendance_id': shift.id, 'recorded_at': shift.checkin_time,
+                                   'latitude': CHU[0], 'longitude': CHU[1], 'inside': True})
+        self.env['school.attendance.record']._purge_gps_before(fields.Datetime.now() + timedelta(minutes=1))
+        self.assertFalse(shift.checkin_lat or shift.checkin_lng or shift.checkout_lat or shift.checkout_lng)
+        self.assertFalse(shift.position_ids.latitude)
+        self.assertTrue(shift.checkin_distance >= 0 and shift.checkin_state == 'valid')
+
+    def test_offline_zones_include_sites(self):
+        zones = self.env['school.offline.challenge'].offline_zones(self.student)
+        self.assertIn({'lat': CHU[0], 'lng': CHU[1], 'radius': 80}, zones)

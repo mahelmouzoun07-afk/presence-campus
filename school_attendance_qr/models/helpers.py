@@ -35,15 +35,28 @@ def get_base_url(env):
     return (env['ir.config_parameter'].sudo().get_param('web.base.url') or '').rstrip('/')
 
 
+def gps_float(value):
+    """Coordonnée reçue du téléphone. None (ou vide) veut dire « hors zone » :
+    le téléphone a vérifié lui-même qu'il n'était dans aucune zone prévue et
+    n'a pas transmis sa position (voir confirm.js, minimizePosition)."""
+    if value is None or value is False or value == '':
+        return None
+    return float(value)
+
+
+def zone_of(place):
+    """Zone envoyée au téléphone (salle ou site de stage) pour qu'il vérifie
+    lui-même s'il y est avant de transmettre sa position."""
+    return {'lat': place.latitude, 'lng': place.longitude, 'radius': place.radius_meters}
+
+
 def client_ip():
-    """IP réelle du visiteur. Derrière un proxy (nginx, Cloudflare, tunnel...),
-    remote_addr donne l'IP du proxy : on lit donc X-Forwarded-For en priorité,
-    en ne gardant que le PREMIER maillon (le plus proche du visiteur)."""
+    """IP réelle du visiteur. Odoo lancé avec --proxy-mode corrige déjà
+    remote_addr d'après X-Forwarded-For en ne gardant que le DERNIER maillon,
+    celui ajouté par notre propre proxy (Cloudflare, Tailscale, nginx). Le
+    premier maillon, lui, peut être écrit par le téléphone : ne jamais le lire."""
     try:
         if request and request.httprequest:
-            xff = request.httprequest.headers.get('X-Forwarded-For')
-            if xff:
-                return xff.split(',')[0].strip()
             return request.httprequest.remote_addr
     except Exception:
         pass

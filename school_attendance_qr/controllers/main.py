@@ -6,6 +6,7 @@ from odoo.exceptions import AccessError
 from odoo.http import request, content_disposition
 
 from ..models import webauthn_helper as wa
+from ..models.helpers import client_ip, gps_float
 
 
 def device_options(holder):
@@ -69,16 +70,7 @@ class AttendanceScanController(http.Controller):
 
     @staticmethod
     def _get_client_ip():
-        """IP réelle du visiteur. Derrière un proxy (nginx, Cloudflare,
-        tunnel...), request.httprequest.remote_addr donne l'IP du proxy,
-        pas celle du téléphone : on lit donc X-Forwarded-For en priorité,
-        en ne gardant que le PREMIER maillon (le plus proche du visiteur) -
-        les suivants peuvent être ajoutés par n'importe quel relais et ne
-        sont pas dignes de confiance."""
-        xff = request.httprequest.headers.get('X-Forwarded-For')
-        if xff:
-            return xff.split(',')[0].strip()
-        return request.httprequest.remote_addr
+        return client_ip()
 
     # ------------------------------------------------------------ WebAuthn
     @http.route('/school/attendance/webauthn/options', type='json', auth='user')
@@ -111,8 +103,8 @@ class AttendanceScanController(http.Controller):
             return request.env['school.attendance.record'].sudo().register_scan(
                 room_token=token,
                 student_id=student.id,
-                latitude=float(latitude),
-                longitude=float(longitude),
+                latitude=gps_float(latitude),
+                longitude=gps_float(longitude),
                 device_fingerprint=device_fingerprint,
                 accuracy=accuracy,
                 client_ip=self._get_client_ip(),
