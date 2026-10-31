@@ -66,8 +66,8 @@ cd ~/odoo && source venv/bin/activate
   pas dépendre des données déjà présentes dans `presence_test` (noms uniques).
 - Paquet Python supplémentaire : `pywebpush` (notifications push), installé dans le venv.
 - Infra (sauvegardes, surveillance, tunnel nommé, mode hybride) : `outils/INFRA.md`.
-- Adresse de test fixe : Tailscale Funnel (dans WSL) `https://mahel.tail88ed56.ts.net` → port 8069
-  (`tailscale funnel status`). Funnel envoie X-Forwarded-For : l'IP réelle arrive via `--proxy-mode`.
+- Adresse de test fixe : Tailscale Funnel (dans WSL) → port 8069 ; l'adresse s'affiche avec
+  `tailscale funnel status` (ne pas l'écrire dans le dépôt, il est public). Funnel envoie X-Forwarded-For : l'IP réelle arrive via `--proxy-mode`.
 - Ancien tunnel de test rapide : `cloudflared tunnel --url http://localhost:8069` (adresse qui change),
   puis mettre à jour `web.base.url` dans Paramètres → Technique → Paramètres système.
 
