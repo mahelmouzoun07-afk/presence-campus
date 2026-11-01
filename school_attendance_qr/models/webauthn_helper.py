@@ -76,7 +76,7 @@ def verify_registration(session, httprequest, credential_json):
         verification = verify_registration_response(
             credential=credential, expected_challenge=base64.b64decode(challenge_b64),
             expected_rp_id=rp_id_from_request(httprequest),
-            expected_origin=httprequest.host_url.rstrip('/'), require_user_verification=True,
+            expected_origin='https://' + httprequest.host, require_user_verification=True,
         )
     except InvalidRegistrationResponse as e:
         return None, f"Vérification de l'appareil refusée : {e}"
@@ -104,7 +104,7 @@ def verify_assertion(httprequest, holder, credential_json, challenge):
         verification = verify_authentication_response(
             credential=credential, expected_challenge=challenge,
             expected_rp_id=rp_id_from_request(httprequest),
-            expected_origin=httprequest.host_url.rstrip('/'),
+            expected_origin='https://' + httprequest.host,
             credential_public_key=base64.b64decode(holder.webauthn_public_key),
             credential_current_sign_count=holder.webauthn_sign_count, require_user_verification=True,
         )
