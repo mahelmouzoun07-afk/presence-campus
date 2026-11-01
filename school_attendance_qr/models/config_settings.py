@@ -18,6 +18,14 @@ class ResConfigSettings(models.TransientModel):
         ('block', "Bloquer : la présence n'est pas enregistrée tant que la scolarité n'est pas à jour"),
     ], string="Étudiants avec scolarité impayée", default='off',
         config_parameter='school_attendance_qr.payment_policy')
+    school_face_policy = fields.Selection([
+        ('off', "Désactivée (par défaut)"),
+        ('flag', "Signaler : la présence est enregistrée mais mise « à vérifier » en cas de doute"),
+        ('block', "Bloquer : refuser quand le visage est clairement différent (un simple doute reste « à vérifier »)"),
+    ], string="Vérification du visage", default='off', config_parameter='school_attendance_qr.face_policy')
+    school_face_threshold = fields.Float(
+        string="Seuil de ressemblance du visage", default=0.363, digits=(4, 3),
+        config_parameter='school_attendance_qr.face_threshold')
     school_payment_include_partial = fields.Boolean(
         string="Inclure aussi les paiements partiels",
         config_parameter='school_attendance_qr.payment_include_partial')
