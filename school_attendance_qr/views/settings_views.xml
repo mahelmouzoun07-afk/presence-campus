@@ -80,15 +80,6 @@
               <field name="school_monitoring_backups"/>
             </setting>
           </block>
-          <block title="Vérification du visage">
-            <setting string="Vérification du visage"
-                     help="L'étudiant s'inscrit lui-même une seule fois avec sa caméra. Les photos ne sont jamais conservées, seulement une empreinte numérique, stockée sur le serveur de l'école. Personne ne peut la modifier. Avant usage réel : autorisation de l'APDP.">
-              <field name="school_face_policy"/>
-            </setting>
-            <setting string="Seuil de ressemblance" help="Plus il est haut, plus le contrôle est strict. Garder la valeur par défaut tant que des essais sur de vrais téléphones n'ont pas été faits.">
-              <field name="school_face_threshold"/>
-            </setting>
-          </block>
           <block title="Scolarité et présence">
             <setting string="Étudiants avec scolarité impayée"
                      help="Par défaut, rien ne change. « Signaler » enregistre la présence mais la place dans « À traiter ». « Bloquer » refuse la confirmation de présence : à réserver à une politique claire et connue des étudiants.">

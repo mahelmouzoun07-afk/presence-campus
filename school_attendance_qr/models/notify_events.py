@@ -9,7 +9,7 @@ from .helpers import icp, icp_bool, icp_int, local_time
 from .task import DIRECTION_TASK_TYPES
 
 FRAUD_TASK_TYPES = ('gps_identical', 'scan_cluster', 'impossible_speed', 'device_shared', 'login_failures',
-                    'relay_pattern', 'headcount', 'offline_check', 'face_mismatch', 'face_duplicate')
+                    'relay_pattern', 'headcount', 'offline_check')
 
 
 def _local_hhmm(env, dt):

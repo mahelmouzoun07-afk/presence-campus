@@ -6,7 +6,6 @@ from odoo.exceptions import AccessError
 from odoo.http import request, content_disposition
 
 from ..models import webauthn_helper as wa
-from ..models.face import engine_available
 from ..models.helpers import client_ip, gps_float
 
 
@@ -84,31 +83,9 @@ class AttendanceScanController(http.Controller):
             return {'error': "Aucun profil étudiant associé à ce compte."}
         return device_options(student)
 
-    # ------------------------------------------------------------- visage
-    @http.route('/school/attendance/face/status', type='json', auth='user')
-    def face_status(self):
-        """Dit au téléphone s'il doit faire la vérification du visage, et si
-        l'étudiant doit d'abord s'inscrire. Ne donne aucune information sur le visage."""
-        student = self._current_student()
-        Face = request.env['school.student.face']
-        active = bool(student) and Face.policy() != 'off' and engine_available()
-        return {'active': active, 'enrolled': bool(student and student.face_enrolled_at)}
-
-    @http.route('/school/attendance/face/challenge', type='json', auth='user')
-    def face_challenge(self):
-        return {'colors': request.env['school.student.face'].new_challenge(request.session)}
-
-    @http.route('/school/attendance/face/enroll', type='json', auth='user')
-    def face_enroll(self, poses=None, flash=None):
-        student = self._current_student()
-        if not student:
-            return {'error': "Aucun profil étudiant associé à ce compte."}
-        ok, error = request.env['school.student.face'].enroll(student, poses, flash, request.session)
-        return {'ok': True} if ok else {'error': error}
-
     @http.route('/school/attendance/confirm', type='json', auth='user')
     def confirm(self, token, latitude, longitude, device_fingerprint, webauthn_mode, webauthn_credential,
-               accuracy=0, face_frames=None, face_no_camera=False):
+               accuracy=0):
         """Appelé en JS après géolocalisation ET vérification WebAuthn
         (empreinte / Face ID / code PIN du téléphone). L'étudiant est déduit
         de l'utilisateur connecté, jamais transmis par le client."""
@@ -122,14 +99,8 @@ class AttendanceScanController(http.Controller):
         if error:
             return {'error': error}
 
-        face_error, face_flag = request.env['school.student.face'].check_for_scan(
-            student, face_frames, face_no_camera, request.session)
-        if face_error:
-            request.env['school.audit.log'].log('presence_refused', face_error, student=student)
-            return {'error': face_error}
-
         try:
-            return request.env['school.attendance.record'].sudo().with_context(face_flag=face_flag).register_scan(
+            return request.env['school.attendance.record'].sudo().register_scan(
                 room_token=token,
                 student_id=student.id,
                 latitude=gps_float(latitude),

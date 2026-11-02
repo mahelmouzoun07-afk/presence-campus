@@ -10,14 +10,13 @@
  * - Notifications push : affichées même application fermée. */
 'use strict';
 
-var VERSION = 'presence-v12-3';
+var VERSION = 'presence-v12-2';
 var PAGES = VERSION + '-pages';
 var ASSETS = VERSION + '-assets';
 var DOCS = 'presence-documents';  // documents gardés hors ligne à la demande (indépendant des versions)
 var OFFLINE_URL = '/presence/hors-ligne';
 var PRECACHE = [OFFLINE_URL, '/school_attendance_qr/static/src/js/confirm.js',
-                '/school_attendance_qr/static/src/js/pwa.js',
-                '/school_attendance_qr/static/src/js/face.js'];
+                '/school_attendance_qr/static/src/js/pwa.js'];
 
 self.addEventListener('install', function (event) {
   event.waitUntil(caches.open(PAGES).then(function (cache) {

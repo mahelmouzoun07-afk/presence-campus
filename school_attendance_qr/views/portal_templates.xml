@@ -89,7 +89,6 @@
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/theme.js"></script>
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/confirm.js"></script>
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/pwa.js"></script>
-        <script type="text/javascript" src="/school_attendance_qr/static/src/js/face.js"></script>
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/countdown.js"></script>
         <t t-out="scripts or ''"/>
       </body>

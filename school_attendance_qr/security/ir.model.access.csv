@@ -11,4 +11,3 @@ access_school_audit_log_admin,school.audit.log.admin,model_school_audit_log,scho
 access_school_notification_admin,school.notification.admin,model_school_notification,school_base.group_school_admin,1,0,0,0
 access_school_push_subscription_admin,school.push.subscription.admin,model_school_push_subscription,school_base.group_school_admin,1,0,0,1
 access_school_offline_challenge_admin,school.offline.challenge.admin,model_school_offline_challenge,school_base.group_school_admin,1,0,0,0
-access_school_student_face_nobody,school.student.face.nobody,model_school_student_face,,0,0,0,0

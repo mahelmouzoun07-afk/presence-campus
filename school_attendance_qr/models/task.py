@@ -19,8 +19,6 @@ TASK_TYPES = [
     ('relay_pattern', 'Relais répétés pour un même étudiant'),
     ('headcount', 'Comptage des têtes incohérent'),
     ('offline_check', 'Présence hors ligne à vérifier'),
-    ('face_mismatch', 'Visage différent de celui de l\'étudiant'),
-    ('face_duplicate', 'Même visage pour deux étudiants'),
     ('server', 'Alerte serveur'),
 ]
 

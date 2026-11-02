@@ -438,19 +438,12 @@ class SchoolAttendanceRecord(models.Model):
             state = 'flagged'
             reason = self._join_reasons(reason, payment_reason)
 
-        face_reason = self.env.context.get('face_flag')
-        if face_reason and state != 'rejected':
-            state = 'flagged'
-            reason = self._join_reasons(reason, face_reason)
-
         vals = {
             'session_id': session.id, 'student_id': student.id,
             'scan_datetime': fields.Datetime.now(), 'device_fingerprint': device_fingerprint, 'client_ip': client_ip,
             'latitude': latitude, 'longitude': longitude, 'accuracy': accuracy,
             'distance_meters': distance, 'state': state, 'flag_reason': reason,
         }
-        if face_reason and state != 'rejected':
-            vals['proof_level'] = 'E'
         if existing:
             existing.write(vals)
             record = existing
@@ -488,13 +481,6 @@ class SchoolAttendanceRecord(models.Model):
                 "demandez au secrétariat de réinitialiser l'appareil enregistré sur votre compte."))
 
         distance, state, reason = self._evaluate_distance(session.room_id, latitude, longitude, accuracy)
-
-        face_reason = self.env.context.get('face_flag')
-        if face_reason and state != 'rejected':
-            state = 'flagged'
-            reason = self._join_reasons(reason, face_reason)
-            if record.proof_level == 'A':
-                record.proof_level = 'E'
 
         record.write({
             'checkout_scan_datetime': fields.Datetime.now(),
