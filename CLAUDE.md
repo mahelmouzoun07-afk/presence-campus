@@ -103,6 +103,11 @@ cd ~/odoo && source venv/bin/activate
 - IP client : `helpers.client_ip()` = `remote_addr` (corrigé par `--proxy-mode`), jamais le
   premier maillon de X-Forwarded-For (falsifiable).
 - Changer un script du portail → monter `VERSION` dans `sw.js` (cache des téléphones).
+- Visage obligatoire à chaque scan de cours (`face_policy` = `block` par défaut) ; WebAuthn gardé seulement pour la
+  présence relayée et les stages (`webauthn: false` dans `initConfirmWidget` pour les cours).
+- Charte « vert et verre » (v13) : tout est dans `static/src/css/app.css` (tokens + composants), police Plus Jakarta Sans
+  servie en local (`fonts.css`, `static/src/fonts/`). Barre de navigation = pilule en verre (3 onglets) + gros bouton rond
+  qui ouvre le panneau d'actions de l'accueil (`sheet.js`). Résultat de confirmation et selfie : plein écran (`confirm.js`, `face.js`).
 
 ## Reste à faire (hors code ou à décider)
 

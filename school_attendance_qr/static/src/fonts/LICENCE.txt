@@ -1,0 +1,4 @@
+Plus Jakarta Sans — Copyright 2020 The Plus Jakarta Sans Project Authors
+(https://github.com/tokotype/PlusJakartaSans).
+Licence : SIL Open Font License 1.1 — https://openfontlicense.org
+La police est servie par le serveur de l'école (pas d'appel à Google).

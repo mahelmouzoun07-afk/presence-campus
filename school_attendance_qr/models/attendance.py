@@ -471,7 +471,8 @@ class SchoolAttendanceRecord(models.Model):
                                "Présence enregistrée mais signalée (réglage « signaler »).", session=session)
         return {
             'phase': 'checkin', 'state': record.state, 'flag_reason': record.flag_reason,
-            'course_name': session.course_id.name,
+            'course_name': session.course_id.name, 'room_name': session.room_id.name,
+            'time_label': session.fmt_local(record.scan_datetime),
         }
 
     def _register_checkout(self, session, student, latitude, longitude, device_fingerprint, accuracy, client_ip):
@@ -515,7 +516,8 @@ class SchoolAttendanceRecord(models.Model):
                 record.checkout_flag_reason or '', record=record)
         return {
             'phase': 'checkout', 'state': record.checkout_state, 'flag_reason': record.checkout_flag_reason,
-            'course_name': session.course_id.name,
+            'course_name': session.course_id.name, 'room_name': session.room_id.name,
+            'time_label': session.fmt_local(record.checkout_scan_datetime),
         }
 
     # ------------------------------------------- conservation des positions

@@ -2,12 +2,12 @@
 <odoo>
 
   <!--
-    Accueil de l'application étudiante. Reprend la maquette :
-    - en-tête avec le nom de l'école, la promotion de l'étudiant et la cloche des alertes ;
-    - cours en cours avec compte à rebours de la fenêtre et bouton de confirmation ;
-    - anneau de présence et moyenne générale ;
-    - prochaines échéances ;
-    - prochain cours.
+    Accueil de l'application étudiante (style « vert et verre ») :
+    - grand bandeau vert : école, cloche des alertes, salutation, promotion ;
+    - carte du cours en cours (ou du prochain) avec anneau de présence et trois chiffres ;
+    - moyenne et échéances ;
+    - le gros bouton rond de la barre de navigation ouvre le panneau sombre des actions
+      (entrée, sortie, absence, raccourcis, confirmation par selfie + position).
     L'inconnu (pas de cours, pas de note, pas d'échéance) est géré par des t-if.
   -->
   <template id="portal_dashboard" name="Accueil étudiant">
@@ -17,6 +17,11 @@
 
       <t t-set="initial_bg" t-value="(student.prenom or ' ')[0] + (student.nom or ' ')[0]"/>
       <t t-set="unread" t-value="request.env['school.notification'].sudo().search_count([('user_id', '=', request.env.uid), ('is_read', '=', False)])"/>
+      <t t-set="Sess" t-value="request.env['school.attendance.session']"/>
+      <t t-set="rate" t-value="student.attendance_rate"/>
+      <t t-set="expected" t-value="student.sessions_expected"/>
+      <t t-set="miss_pct" t-value="(student.sessions_missed * 100.0 / expected) if expected else 0"/>
+      <t t-set="focus" t-value="session or next_session"/>
 
       <header class="topbar">
         <div class="topbar-row">
@@ -24,122 +29,130 @@
             <div class="school-chip-logo" t-esc="initial_bg"/>
             <div class="school-chip-text">
               <b t-esc="request.env.company.name"/>
-              <t t-if="student.promotion_id"><span t-esc="student.promotion_id.name"/></t>
             </div>
           </div>
           <a href="/presence/notifications" class="icon-btn" t-attf-aria-label="Alertes, #{unread or 0} nouvelle(s)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 21h4"/></svg>
             <span t-if="unread" class="icon-badge" t-esc="unread"/>
           </a>
         </div>
-        <div>
-          <h1>Bonjour, <t t-esc="student.prenom or student.name"/></h1>
-          <p class="topbar-sub"><t t-esc="today_label"/><t t-if="today_count"> · <t t-esc="today_count"/> cours aujourd'hui</t></p>
+        <h1 style="margin-top:12px;">Bonjour, <t t-esc="student.prenom or student.name"/></h1>
+        <div class="topbar-sub">
+          <t t-if="student.promotion_id"><t t-esc="student.promotion_id.name"/></t><t t-if="student.promotion_id and student.filiere_id"> · </t><t t-if="student.filiere_id"><t t-esc="student.filiere_id.name"/></t>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px; height:44px; padding:0 16px 0 8px; border-radius:22px; background:#fff; color:#1B1B22; font-weight:800; font-size:15px;">
+            <span style="width:30px; height:30px; border-radius:10px; background:#E5533D; color:#fff; display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            </span>
+            <span>Aujourd'hui</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; height:44px; padding:0 16px; border-radius:22px; background:#fff; color:#1B1B22; font-weight:800; font-size:15px;">
+            <span t-attf-style="width:10px; height:10px; border-radius:50%; background:#{'#3F9B50' if rate &gt;= 70 else '#D2432C'};"/>
+            Assiduité <t t-esc="'%d' % rate"/> %
+          </div>
         </div>
       </header>
 
       <div class="page">
 
-        <!-- cours en cours -->
-        <t t-if="session">
-          <section class="card spotlight" style="display:flex; flex-direction:column; gap:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span class="eyebrow">
-                <t t-esc="'SORTIE À CONFIRMER' if phase_hint == 'checkout' else 'ENTRÉE OUVERTE'"/>
-              </span>
-              <span class="eyebrow bad" id="ac_countdown" t-att-data-close-at="close_at"></span>
-            </div>
-            <div>
-              <div class="h-title" t-esc="session.course_id.name"/>
-              <div class="h-sub">
-                <t t-esc="session.room_id.name"/> ·
-                <t t-esc="request.env['school.attendance.session'].fmt_local(session.time_start, '%Hh%M')"/>
-                – <t t-esc="request.env['school.attendance.session'].fmt_local(session.time_end, '%Hh%M')"/>
+        <!-- cours en cours, ou prochain cours -->
+        <section class="card spotlight" style="display:flex; flex-direction:column; gap:18px;">
+          <t t-if="focus">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="min-width:0;">
+                <div style="display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;">
+                  <span class="eyebrow">
+                    <t t-if="session"><t t-esc="'SORTIE À CONFIRMER' if phase_hint == 'checkout' else 'ENTRÉE OUVERTE'"/></t>
+                    <t t-else="">PROCHAIN COURS</t>
+                  </span>
+                  <span t-if="session" class="eyebrow bad" id="ac_countdown" t-att-data-close-at="close_at"></span>
+                </div>
+                <div style="margin-top:6px; font-size:28px; font-weight:800; letter-spacing:-0.02em; line-height:1.1;" t-esc="focus.course_id.name"/>
+                <div style="margin-top:6px; font-size:14px; font-weight:600; color:var(--muted);">
+                  <t t-if="session">
+                    <t t-esc="Sess.fmt_local(session.time_start, '%Hh%M')"/> – <t t-esc="Sess.fmt_local(session.time_end, '%Hh%M')"/>
+                  </t>
+                  <t t-else=""><t t-esc="Sess.fmt_local(next_session.time_start, '%d/%m · %Hh%M')"/></t>
+                  · <t t-esc="focus.room_id.name"/>
+                </div>
               </div>
+              <a href="/presence/profil" class="ring" t-attf-style="background:conic-gradient(var(--brand-solid) 0 #{'%d' % rate}%, var(--line-soft) 0);" t-attf-aria-label="Taux de présence : #{'%d' % rate} %">
+                <span><t t-esc="'%d' % rate"/>%</span>
+              </a>
             </div>
-            <button type="button" id="ac_seal" class="btn-primary accent" style="height:60px; border-radius:16px;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 11c0 3-1 6-3 8"/><path d="M8 7.5A5 5 0 0 1 17 11c0 2 0 4-1 6"/><path d="M5 10a7 7 0 0 1 2-4.5"/><path d="M12 11v1"/></svg>
-              <span class="ac-seal-label"><t t-esc="'Confirmer ma sortie' if phase_hint == 'checkout' else 'Confirmer mon entrée'"/></span>
-            </button>
-            <p id="ac_result" class="ac-result" style="display:none;"/>
-            <p id="ac_result_sub" class="ac-result-sub" style="display:none;"/>
-            <div style="font-size:11.5px; color:var(--muted); text-align:center;">Position et visage vérifiés automatiquement.</div>
-          </section>
-          <script type="text/javascript">
-            document.addEventListener('DOMContentLoaded', function () {
-              SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>', {
-                face: true, webauthn: false,
-                zones: [{ lat: <t t-esc="session.room_id.latitude"/>, lng: <t t-esc="session.room_id.longitude"/>, radius: <t t-esc="session.room_id.radius_meters"/> }],
-              });
-            });
-          </script>
-        </t>
+          </t>
+          <t t-else="">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div>
+                <div class="eyebrow muted">COURS</div>
+                <div style="margin-top:6px; font-size:24px; font-weight:800; line-height:1.15;">Aucun cours programmé</div>
+                <div style="margin-top:6px; font-size:14px; font-weight:600; color:var(--muted);">Profitez-en pour réviser.</div>
+              </div>
+              <a href="/presence/profil" class="ring" t-attf-style="background:conic-gradient(var(--brand-solid) 0 #{'%d' % rate}%, var(--line-soft) 0);" t-attf-aria-label="Taux de présence : #{'%d' % rate} %">
+                <span><t t-esc="'%d' % rate"/>%</span>
+              </a>
+            </div>
+          </t>
 
-        <!-- Pas de cours en ce moment -->
-        <t t-elif="next_session">
-          <section class="card" style="text-align:center; padding:22px 18px;">
-            <div class="eyebrow muted">PROCHAIN COURS</div>
-            <div class="h-title" style="margin-top:6px;" t-esc="next_session.course_id.name"/>
-            <div class="h-sub" style="margin-top:2px;">
-              <t t-esc="next_session.room_id.name"/> ·
-              <t t-esc="request.env['school.attendance.session'].fmt_local(next_session.time_start, '%d/%m à %Hh%M')"/>
+          <div class="stats">
+            <div class="stat">
+              <div class="k">Présences</div>
+              <div class="v" t-esc="student.sessions_attended"/>
+              <div class="bar"><i t-attf-style="width:#{'%d' % rate}%; background:#3F9B50;"/></div>
             </div>
-          </section>
-        </t>
-        <t t-else="">
-          <section class="card" style="text-align:center; padding:22px 18px; color:var(--muted);">
-            Aucun cours programmé.
-          </section>
-        </t>
+            <div class="stat">
+              <div class="k">Absences</div>
+              <div class="v" t-esc="student.sessions_missed"/>
+              <div class="bar"><i t-attf-style="width:#{'%d' % miss_pct}%; background:#E5533D;"/></div>
+            </div>
+            <div class="stat">
+              <div class="k">Séances</div>
+              <div class="v" t-esc="expected"/>
+              <div class="bar"><i style="width:100%; background:#4A83E8;"/></div>
+            </div>
+          </div>
+          <div style="font-size:14px; font-weight:600; color:var(--muted);">
+            <t t-esc="student.sessions_attended"/> sur <t t-esc="expected"/> séances suivies
+          </div>
+        </section>
 
-        <!-- 2 tuiles : présence et moyenne -->
-        <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;">
-          <a href="/presence/profil" class="card" style="display:flex; flex-direction:column; gap:8px;">
-            <span style="font-size:12px; color:var(--muted); font-weight:600;">Présence</span>
-            <t t-set="rate" t-value="student.attendance_rate"/>
-            <t t-set="rate_color" t-value="'var(--ok)' if rate &gt;= 70 else 'var(--bad)'"/>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <svg width="46" height="46" viewBox="0 0 46 46" role="img" aria-label="Taux de présence">
-                <circle cx="23" cy="23" r="19" fill="none" stroke="var(--line-soft)" stroke-width="5"/>
-                <circle cx="23" cy="23" r="19" fill="none" t-att-stroke="rate_color" stroke-width="5" stroke-linecap="round" t-attf-stroke-dasharray="#{rate * 119.4 / 100} 120" transform="rotate(-90 23 23)"/>
-              </svg>
-              <span style="font-family:'Source Serif 4',serif; font-size:24px; font-weight:700;" t-att-style="'color:' + rate_color" t-esc="rate_label"/>
-            </div>
-            <span style="font-size:11.5px; color:var(--muted);"><t t-esc="student.sessions_attended"/> sur <t t-esc="student.sessions_expected"/> séances</span>
-          </a>
-          <a t-att-href="moyenne_link" class="card" style="display:flex; flex-direction:column; gap:8px;">
-            <span style="font-size:12px; color:var(--muted); font-weight:600;">Moyenne générale</span>
+        <!-- moyenne générale -->
+        <a t-att-href="moyenne_link" class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <div style="font-size:14px; font-weight:600; color:var(--muted);">Moyenne générale</div>
             <t t-if="moyenne is not None">
-              <span style="font-family:'Source Serif 4',serif; font-size:28px; font-weight:700;">
-                <t t-esc="moyenne"/><span style="font-size:13px; color:var(--muted); font-family:'IBM Plex Sans',sans-serif;"> /<t t-esc="'%g' % moyenne_scale"/></span>
-              </span>
+              <div style="margin-top:2px; font-size:30px; font-weight:800; letter-spacing:-0.02em;">
+                <t t-esc="moyenne"/><span style="font-size:14px; color:var(--muted); font-weight:700;"> /<t t-esc="'%g' % moyenne_scale"/></span>
+              </div>
               <t t-if="latest_note">
-                <span style="font-size:11.5px; color:var(--ok); font-weight:600;">Nouvelle note : <t t-esc="latest_note"/></span>
+                <div style="font-size:13px; color:var(--ok); font-weight:800;">Nouvelle note : <t t-esc="latest_note"/></div>
               </t>
             </t>
             <t t-else="">
-              <span style="font-family:'Source Serif 4',serif; font-size:22px; font-weight:700; color:var(--muted);">—</span>
-              <span style="font-size:11.5px; color:var(--muted);">Pas encore de note publiée</span>
+              <div style="margin-top:2px; font-size:24px; font-weight:800; color:var(--muted);">—</div>
+              <div style="font-size:13px; font-weight:600; color:var(--muted);">Pas encore de note publiée</div>
             </t>
-          </a>
-        </div>
+          </div>
+          <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted-soft)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
 
-        <!-- Échéances à venir -->
+        <!-- échéances à venir -->
         <t t-if="upcoming_events">
-          <section class="card tight" style="display:flex; flex-direction:column; gap:10px;">
+          <section class="card tight" style="display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:baseline;">
-              <span style="font-size:13.5px; font-weight:700;">À venir</span>
-              <a href="/presence/calendrier" style="font-size:12.5px; color:var(--accent); font-weight:600;">Tout voir</a>
+              <span style="font-size:15px; font-weight:800;">À venir</span>
+              <a href="/presence/calendrier" style="font-size:13px; color:var(--accent); font-weight:800;">Tout voir</a>
             </div>
             <t t-foreach="upcoming_events" t-as="ev">
               <div style="display:flex; gap:12px; align-items:center;">
-                <div style="width:44px; text-align:center; border-radius:10px; background:var(--line-soft); padding:4px 0; flex:none;">
-                  <div style="font-size:10px; color:var(--muted);" t-esc="ev['day_label']"/>
-                  <div style="font-weight:700;" t-esc="ev['day_num']"/>
+                <div style="width:48px; text-align:center; border-radius:14px; background:var(--line-soft); padding:5px 0; flex:none;">
+                  <div style="font-size:10.5px; font-weight:700; color:var(--muted);" t-esc="ev['day_label']"/>
+                  <div style="font-weight:800;" t-esc="ev['day_num']"/>
                 </div>
                 <div style="flex:1; min-width:0;">
-                  <div style="font-size:14px; font-weight:600;" t-esc="ev['title']"/>
-                  <div style="font-size:12px; color:var(--muted);" t-esc="ev['sub']"/>
+                  <div style="font-size:15px; font-weight:800;" t-esc="ev['title']"/>
+                  <div style="font-size:13px; font-weight:600; color:var(--muted);" t-esc="ev['sub']"/>
                 </div>
                 <span t-att-class="'dot ' + ev['level']"/>
               </div>
@@ -148,6 +161,111 @@
         </t>
 
       </div>
+
+      <!-- panneau sombre : actions rapides (ouvert par le gros bouton rond) -->
+      <div id="sheet_backdrop" class="sheet-backdrop"></div>
+      <div id="sheet" class="sheet" role="dialog" aria-label="Actions rapides">
+        <div class="sheet-panel">
+
+          <t t-set="can_in" t-value="bool(session) and phase_hint == 'checkin'"/>
+          <t t-set="can_out" t-value="bool(session) and phase_hint == 'checkout'"/>
+
+          <div class="sheet-row">
+            <div style="min-width:0;">
+              <div class="t">Entrée</div>
+              <div class="s">
+                <t t-if="can_in"><t t-esc="session.course_id.name"/> · <t t-esc="Sess.fmt_local(session.time_start, '%Hh%M')"/></t>
+                <t t-elif="next_session">Prochain : <t t-esc="next_session.course_id.name"/> · <t t-esc="Sess.fmt_local(next_session.time_start, '%Hh%M')"/></t>
+                <t t-else="">Aucun cours en ce moment</t>
+              </div>
+            </div>
+            <button t-if="can_in" type="button" class="sheet-btn go" data-confirm="1" aria-label="Confirmer mon entrée">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 8l4 4-4 4M14 12H4"/></svg>
+            </button>
+            <button t-else="" type="button" class="sheet-btn" disabled="disabled" aria-label="Entrée pas disponible"><t t-esc="'Bientôt' if next_session else '—'"/></button>
+          </div>
+
+          <div class="sheet-row">
+            <div style="min-width:0;">
+              <div class="t">Sortie</div>
+              <div class="s">
+                <t t-if="can_out">À confirmer maintenant</t>
+                <t t-elif="session">Disponible en fin de cours</t>
+                <t t-else="">Après votre entrée</t>
+              </div>
+            </div>
+            <button t-if="can_out" type="button" class="sheet-btn go" data-confirm="1" aria-label="Confirmer ma sortie">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M16 8l4 4-4 4M20 12H9"/></svg>
+            </button>
+            <button t-else="" type="button" class="sheet-btn" disabled="disabled" aria-label="Sortie pas disponible"><t t-esc="'Bientôt' if session else '—'"/></button>
+          </div>
+
+          <div class="sheet-row">
+            <div style="min-width:0;">
+              <div class="t">Absence</div>
+              <div class="s">Voir et justifier mes absences</div>
+            </div>
+            <a href="/presence/mes-absences" class="sheet-btn" aria-label="Mes absences">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg>
+            </a>
+          </div>
+
+          <div class="sheet-line"></div>
+
+          <div class="sheet-shortcuts">
+            <a href="/presence/emploi-du-temps">
+              <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+              Emploi du temps
+            </a>
+            <a href="/presence/mes-absences">
+              <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              Mes absences
+            </a>
+            <a href="/presence/etudes">
+              <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></span>
+              Mes notes
+            </a>
+          </div>
+
+          <div class="sheet-row">
+            <div style="min-width:0;">
+              <div class="t">Confirmer ma présence</div>
+              <div class="s" id="ac_hint">
+                <t t-if="session">Selfie + position</t>
+                <t t-else="">Disponible pendant un cours</t>
+              </div>
+            </div>
+            <button t-if="session" type="button" id="ac_seal" class="sheet-btn light" aria-label="Confirmer ma présence : ouvrir la caméra">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1.2M15 9.5v1.2"/><path d="M9 14.2c1.4 1.3 4.6 1.3 6 0"/></svg>
+            </button>
+            <button t-else="" type="button" class="sheet-btn light" disabled="disabled" aria-label="Pas de cours ouvert" style="opacity:.45;">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1.2M15 9.5v1.2"/><path d="M9 14.2c1.4 1.3 4.6 1.3 6 0"/></svg>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <t t-set="scripts">
+        <t t-if="session">
+          <div id="ac_ctx" hidden="hidden" t-att-data-name="student.name" t-att-data-matricule="student.matricule or ''"
+               t-att-data-initials="initial_bg.upper()" t-att-data-course="session.course_id.name" t-att-data-room="session.room_id.name"/>
+          <script type="text/javascript">
+            document.addEventListener('DOMContentLoaded', function () {
+              var ctx = document.getElementById('ac_ctx').dataset;
+              SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>', {
+                face: true, webauthn: false,
+                zones: [{ lat: <t t-esc="session.room_id.latitude"/>, lng: <t t-esc="session.room_id.longitude"/>, radius: <t t-esc="session.room_id.radius_meters"/> }],
+                student: { name: ctx.name, matricule: ctx.matricule, initials: ctx.initials },
+                course: { name: ctx.course, room: ctx.room },
+              });
+              document.querySelectorAll('[data-confirm]').forEach(function (b) {
+                b.addEventListener('click', function () { document.getElementById('ac_seal').click(); });
+              });
+            });
+          </script>
+        </t>
+      </t>
     </t>
   </template>
 

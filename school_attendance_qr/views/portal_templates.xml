@@ -14,16 +14,14 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"/>
         <title><t t-esc="page_title or 'Présence'"/></title>
         <link rel="manifest" href="/presence/manifest.webmanifest"/>
-        <meta name="theme-color" content="#14213D"/>
+        <meta name="theme-color" content="#3F9B50"/>
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
         <meta name="apple-mobile-web-app-title" t-att-content="request.env.company.name"/>
         <link rel="apple-touch-icon" href="/presence/icone/180.png"/>
         <link rel="icon" type="image/png" sizes="192x192" href="/presence/icone/192.png"/>
-        <link rel="preconnect" href="https://fonts.googleapis.com"/>
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
-        <link rel="stylesheet"
-              href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap"/>
+        <link rel="preload" href="/school_attendance_qr/static/src/fonts/PlusJakartaSans-latin.woff2" as="font" type="font/woff2" crossorigin="crossorigin"/>
+        <link rel="stylesheet" href="/school_attendance_qr/static/src/css/fonts.css"/>
         <link rel="stylesheet" href="/school_attendance_qr/static/src/css/app.css"/>
         <t t-out="head or ''"/>
       </head>
@@ -58,31 +56,26 @@
             <div id="pw_sync_result" class="sync-result"/>
           </div>
 
-          <!-- barre de navigation : 4 onglets + bouton central -->
+          <!-- navigation : pilule en verre (3 onglets) + gros bouton rond (confirmer ma présence) -->
           <t t-if="active_nav">
-            <t t-set="unread" t-value="request.env['school.notification'].sudo().search_count([('user_id', '=', request.env.uid), ('is_read', '=', False)])"/>
             <nav class="tabbar" aria-label="Navigation principale">
-              <a href="/presence" t-attf-class="tab #{'active' if active_nav == 'home' else ''}">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/></svg>
-                <span>Accueil</span>
-              </a>
-              <a href="/presence/emploi-du-temps" t-attf-class="tab #{'active' if active_nav == 'timetable' else ''}">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-                <span>Planning</span>
-              </a>
-              <a href="/presence" class="tab fab" aria-label="Confirmer ma présence" id="tab_confirm">
-                <span class="fab-circle">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
-                </span>
-              </a>
-              <a href="/presence/etudes" t-attf-class="tab #{'active' if active_nav in ('studies','timetable_studies') else ''}">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M7 10v5c2.5 2 7.5 2 10 0v-5"/></svg>
-                <span>Études</span>
-              </a>
-              <a href="/presence/profil" t-attf-class="tab #{'active' if active_nav == 'profile' else ''}">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
-                <span>Moi</span>
-              </a>
+              <div class="tabpill">
+                <a href="/presence" t-attf-class="tab #{'active' if active_nav == 'home' else ''}" aria-label="Accueil" t-att-aria-current="'page' if active_nav == 'home' else None">
+                  <svg t-if="active_nav == 'home'" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l9.4 8.2a1 1 0 0 1-.66 1.75H19V20a1 1 0 0 1-1 1h-4v-6h-4v6H6a1 1 0 0 1-1-1v-7.45H3.26a1 1 0 0 1-.66-1.75L12 2.6z"/></svg>
+                  <svg t-else="" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+                </a>
+                <a href="/presence/emploi-du-temps" t-attf-class="tab #{'active' if active_nav in ('timetable', 'timetable_studies') else ''}" aria-label="Emploi du temps" t-att-aria-current="'page' if active_nav in ('timetable', 'timetable_studies') else None">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" t-att-stroke-width="'2.6' if active_nav in ('timetable', 'timetable_studies') else '2'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                </a>
+                <a href="/presence/profil" t-attf-class="tab #{'active' if active_nav == 'profile' else ''}" aria-label="Profil" t-att-aria-current="'page' if active_nav == 'profile' else None">
+                  <svg t-if="active_nav == 'profile'" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 21c.8-4.4 4-6.6 8.5-6.6s7.7 2.2 8.5 6.6z"/></svg>
+                  <svg t-else="" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>
+                </a>
+              </div>
+              <button type="button" id="tab_confirm" class="fab" aria-label="Confirmer ma présence" aria-haspopup="true" aria-expanded="false" aria-controls="sheet">
+                <svg class="fab-open" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1.2M15 9.5v1.2"/><path d="M9 14.2c1.4 1.3 4.6 1.3 6 0"/></svg>
+                <svg class="fab-close" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
             </nav>
           </t>
         </div>
@@ -91,6 +84,7 @@
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/pwa.js"></script>
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/face.js"></script>
         <script type="text/javascript" src="/school_attendance_qr/static/src/js/countdown.js"></script>
+        <script type="text/javascript" src="/school_attendance_qr/static/src/js/sheet.js"></script>
         <t t-out="scripts or ''"/>
       </body>
     </html>

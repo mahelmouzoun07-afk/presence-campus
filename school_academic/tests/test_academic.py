@@ -151,7 +151,7 @@ class TestAcademicPortal(HttpCase):
         self.authenticate('edem.portail', '70707070')
         for url, text in [('/presence/etudes', 'Mes notes'), ('/presence/notes', '13'),
                           ('/presence/calendrier', 'Calendrier'), ('/presence/documents', 'Cours chimie'),
-                          ('/presence', 'Études')]:
+                          ('/presence', 'href="/presence/etudes"')]:
             res = self.url_open(url)
             self.assertEqual(res.status_code, 200, url)
             self.assertIn(text, res.text, url)

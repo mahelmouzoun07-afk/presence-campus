@@ -2,11 +2,11 @@
    Reprend la maquette Demarrage : fond bleu nuit, logo animé, carte blanche. */
 
 body.o_portal {
-  background: var(--night) !important;
+  background: var(--brand) !important;
   color: #fff;
 }
 body.o_portal #wrapwrap {
-  background: var(--night) !important;
+  background: var(--brand) !important;
 }
 body.o_portal .o_main_content,
 body.o_portal main {
@@ -23,29 +23,28 @@ body.o_portal .card {
   background: #fff;
   color: var(--ink);
   border: none;
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, .3);
+  border-radius: 34px;
+  box-shadow: 0 12px 30px rgba(20, 60, 30, .25);
   padding: 24px 22px;
 }
 body.o_portal label { color: var(--ink); font-weight: 600; font-size: 13px; }
 body.o_portal input[type="text"],
 body.o_portal input[type="password"],
 body.o_portal input[type="email"] {
-  width: 100%; box-sizing: border-box; height: 48px;
-  border-radius: 12px; border: 1px solid var(--line);
+  width: 100%; box-sizing: border-box; height: 52px;
+  border-radius: 18px; border: 1px solid var(--line);
   background: var(--surface); color: var(--ink);
   padding: 0 14px; font-size: 14px; margin-top: 4px;
 }
 body.o_portal .btn-primary {
-  width: 100%; height: 50px; border-radius: 14px;
-  background: var(--night); color: #fff; border: none;
-  font-weight: 600; font-size: 15.5px;
-  box-shadow: 0 10px 30px rgba(140, 90, 11, .25);
+  width: 100%; height: 58px; border-radius: 29px;
+  background: #1E1E24; color: #fff; border: none;
+  font-weight: 800; font-size: 16px;
 }
 body.o_portal .text-muted,
 body.o_portal .form-text,
 body.o_portal a.btn-link {
-  color: #C4CAD8 !important;
+  color: var(--on-brand) !important;
 }
 body.o_portal footer,
 body.o_portal .o_footer_copyright,
@@ -59,30 +58,29 @@ body.o_portal .o_portal_navbar {
   display: none !important;
 }
 
-/* Logo animé */
+/* Logo animé : panneau vert posé sur la carte (ne dépend pas du fond de la page) */
 .splash-brand {
-  text-align: center;
-  padding: 50px 0 20px;
-  color: #fff;
+  position: relative; overflow: hidden; text-align: center;
+  padding: 34px 16px 26px; margin: 0 0 18px; border-radius: 28px;
+  background: var(--brand); color: #fff;
 }
-.splash-brand { position: relative; }
 .splash-ring {
-  position: absolute; left: 50%; top: 50px; width: 110px; height: 110px;
-  margin-left: -55px; border-radius: 32px;
-  border: 2px solid var(--accent);
+  position: absolute; left: 50%; top: 34px; width: 96px; height: 96px;
+  margin-left: -48px; border-radius: 50%;
+  border: 2px solid #fff;
   animation: splash-ring 1.8s ease-out infinite;
 }
 .splash-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 96px; height: 96px; border-radius: 28px;
-  background: var(--accent); color: #fff;
-  font-family: 'Source Serif 4', serif; font-size: 38px; font-weight: 700;
+  width: 96px; height: 96px; border-radius: 50%;
+  background: #fff; color: #2B7A3B;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 36px; font-weight: 800;
   animation: splash-rise .7s ease-out both;
   position: relative; z-index: 1;
 }
 .splash-title { margin-top: 20px; animation: splash-rise .7s .2s ease-out both; }
-.splash-name { font-family: 'Source Serif 4', serif; font-size: 28px; font-weight: 700; }
-.splash-sub { font-size: 14px; color: #C4CAD8; margin-top: 4px; }
+.splash-name { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 28px; font-weight: 700; }
+.splash-sub { font-size: 14px; font-weight: 700; color: var(--on-brand); margin-top: 4px; }
 
 @keyframes splash-rise {
   from { opacity: 0; transform: translateY(14px) scale(.96); }

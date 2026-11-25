@@ -150,22 +150,99 @@
     });
   }
 
+  /* ------------------------------------------------ écran de résultat plein écran */
+  var ICONS = {
+    ok: 'M5 12l5 5L20 7',
+    warn: 'M12 8v5M12 16.5h.01M10.3 3.9L2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
+    bad: 'M6 6l12 12M18 6L6 18',
+  };
+  function svgIcon(d, size) {
+    var ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), path = document.createElementNS(ns, 'path');
+    svg.setAttribute('width', size); svg.setAttribute('height', size); svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '3');
+    svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round'); svg.setAttribute('aria-hidden', 'true');
+    path.setAttribute('d', d); svg.appendChild(path);
+    return svg;
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  /* spec : kind (ok|warn|bad), title, sub, message, student {name, initials}, rows [[libellé, texte, chip?]],
+   * button {label, onClick}. Tout le texte passe par textContent : rien n'est interprété comme du HTML. */
+  function showOutcome(spec) {
+    var root = el('div', 'oc ' + (spec.kind === 'ok' ? '' : spec.kind));
+    root.setAttribute('role', 'alertdialog');
+    root.setAttribute('aria-live', 'assertive');
+    var inner = el('div', 'oc-inner');
+    var head = el('div', 'oc-head');
+    var icon = el('div', 'oc-icon');
+    icon.appendChild(svgIcon(ICONS[spec.kind], 46));
+    head.appendChild(icon);
+    head.appendChild(el('h1', 'oc-title', spec.title));
+    if (spec.sub) head.appendChild(el('div', 'oc-sub', spec.sub));
+    inner.appendChild(head);
+
+    if (spec.rows && spec.rows.length) {
+      var card = el('div', 'oc-card');
+      var av = el('div', 'oc-avatar');
+      av.appendChild(el('span', '', (spec.student && spec.student.initials) || ''));
+      card.appendChild(av);
+      var rows = el('div', 'oc-rows');
+      spec.rows.forEach(function (r) {
+        var row = el('div', 'oc-row');
+        row.appendChild(el('span', 'k', r[0]));
+        if (r[2]) {
+          var chip = el('span', 'oc-chip ' + r[2]); chip.appendChild(el('i')); chip.appendChild(document.createTextNode(r[1]));
+          row.appendChild(chip);
+        } else {
+          row.appendChild(el('span', 'v', r[1]));
+        }
+        rows.appendChild(row);
+      });
+      card.appendChild(rows);
+      inner.appendChild(card);
+    }
+    if (spec.message) inner.appendChild(el('p', 'oc-msg', spec.message));
+
+    var foot = el('div', 'oc-foot');
+    var btn = el('button', 'btn-primary', spec.button.label); btn.type = 'button';
+    btn.addEventListener('click', function () { root.remove(); spec.button.onClick(); });
+    foot.appendChild(btn);
+    inner.appendChild(foot);
+    root.appendChild(inner);
+    document.body.appendChild(root);
+    btn.focus({ preventScroll: true });
+    return root;
+  }
+
+  function nowLabel() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + 'h' + ('0' + d.getMinutes()).slice(-2);
+  }
+
   /* options (facultatif) : confirmUrl (adresse d'envoi, par défaut celle des
    * cours), params (champs ajoutés à l'envoi), offline (champs ajoutés à une
    * confirmation hors ligne, ex. {target: 'internship'}), zones (salles ou
-   * sites où la position peut être transmise), place (« de la salle »…). */
+   * sites où la position peut être transmise), place (« de la salle »…),
+   * webauthn (false : pas de clé d'appareil, c'est le visage qui prouve),
+   * student / course : si présents, le résultat s'affiche en plein écran. */
   function initConfirmWidget(token, phaseHint, options) {
     options = options || {};
     var seal = document.getElementById('ac_seal');
     var result = document.getElementById('ac_result');
     var resultSub = document.getElementById('ac_result_sub');
     if (!seal) return;
+    var fullScreen = !!options.student;
 
     function showResult(cls, text, sub) {
+      if (!result) return;
       result.className = 'ac-result ' + cls;
       result.textContent = text;
       result.style.display = 'block';
-      if (sub) { resultSub.textContent = sub; resultSub.style.display = 'block'; }
+      if (sub && resultSub) { resultSub.textContent = sub; resultSub.style.display = 'block'; }
     }
     function stamp(color, iconPath) {
       seal.style.setProperty('--state-color', color);
@@ -178,6 +255,15 @@
     var defaultLabel = phaseHint === 'checkout' ? 'Confirmer ma sortie' : 'Confirmer mon entrée';
 
     function resetLabel() { var l = seal.querySelector('.ac-seal-label'); if (l) l.textContent = defaultLabel; }
+    function release() { seal.classList.remove('ac-busy'); resetLabel(); }
+
+    /* Affiche un échec : plein écran si la page le prévoit, sinon dans le texte sous le bouton. */
+    function fail(message, title) {
+      release();
+      if (!fullScreen) { showResult('ac-err', message); return; }
+      showOutcome({ kind: 'bad', title: title || 'Confirmation impossible', message: message,
+                    button: { label: 'Fermer', onClick: function () {} } });
+    }
 
     seal.addEventListener('click', function () {
       if (seal.classList.contains('ac-busy') || seal.classList.contains('ac-stamped')) return;
@@ -189,14 +275,18 @@
         if (state === 'offline') {
           global.SchoolPwa.confirmOffline(options.offline, { zones: options.zones }).then(function () {
             seal.classList.remove('ac-busy');
-            stamp('var(--muted)', ICON_CHECK);
-            showResult('ac-warn', 'Enregistrée hors ligne', "Le réseau de l'école ne répond pas. Votre confirmation " +
-              "sera envoyée et vérifiée dès le retour de la connexion (badge « Validée hors ligne »).");
+            var text = "Le réseau de l'école ne répond pas. Votre confirmation sera envoyée et vérifiée dès le retour " +
+              "de la connexion (badge « Validée hors ligne »).";
+            if (fullScreen) {
+              seal.classList.add('ac-stamped');
+              showOutcome({ kind: 'warn', title: 'Enregistrée hors ligne', sub: 'En attente de synchronisation', message: text,
+                            button: { label: 'Terminer', onClick: function () { global.location.reload(); } } });
+            } else {
+              stamp('var(--muted)', ICON_CHECK);
+              showResult('ac-warn', 'Enregistrée hors ligne', text);
+            }
             global.SchoolPwa.updateBanner();
-          }).catch(function (err) {
-            seal.classList.remove('ac-busy'); resetLabel();
-            showResult('ac-err', err && err.message ? err.message : String(err));
-          });
+          }).catch(function (err) { fail(err && err.message ? err.message : String(err)); });
           return;
         }
         confirmOnline();
@@ -206,21 +296,54 @@
     /* Vérification du visage (seulement sur la page des cours, si l'école l'a activée). */
     function faceStep() {
       if (!options.face || !global.SchoolFace) return Promise.resolve({});
-      return global.SchoolFace.prepare().then(function (out) { return out && !out.skip ? out : {}; });
+      return global.SchoolFace.prepare({ place: options.course && options.course.room, course: options.course && options.course.name })
+        .then(function (out) { return out && !out.skip ? out : {}; });
+    }
+
+    function present(res, faceChecked, zoneCheck, outsideNote) {
+      var isCheckout = res.phase === 'checkout';
+      var okLabel = isCheckout ? 'Sortie confirmée' : 'Entrée confirmée';
+      var warnLabel = isCheckout ? 'Sortie enregistrée, à vérifier' : 'Entrée enregistrée, à vérifier';
+      var errLabel = isCheckout ? 'Sortie refusée' : 'Entrée refusée';
+      if (!fullScreen) {
+        if (res.error) { stamp('var(--brick)', ICON_CROSS); showResult('ac-err', res.error); }
+        else if (res.state === 'valid') { stamp('var(--green)', ICON_CHECK); showResult('ac-ok', okLabel); }
+        else if (res.state === 'rejected') { stamp('var(--brick)', ICON_CROSS); showResult('ac-err', errLabel, res.flag_reason); }
+        else { stamp('var(--amber)', ICON_WARN); showResult('ac-warn', warnLabel, res.flag_reason); }
+        return;
+      }
+      if (res.error) { fail(res.error); return; }
+      if (res.state === 'rejected') { fail(res.flag_reason || 'La confirmation a été refusée.', errLabel); return; }
+      seal.classList.add('ac-stamped');
+      var course = res.course_name || (options.course && options.course.name) || '';
+      var room = res.room_name || (options.course && options.course.room) || '';
+      var rows = [
+        ['Nom', options.student.name], ['Matricule', options.student.matricule],
+        ['Cours', course], ['Salle · heure', room + ' · ' + (res.time_label || nowLabel())],
+      ];
+      var done = { label: 'Terminer', onClick: function () { global.location.reload(); } };
+      if (res.state === 'valid') {
+        rows.push(['Preuve', faceChecked ? 'Visage + position vérifiés' : 'Position vérifiée', 'ok']);
+        showOutcome({ kind: 'ok', title: isCheckout ? 'Sortie enregistrée !' : 'Présence enregistrée !',
+          sub: isCheckout ? 'Votre sortie a bien été prise en compte.' : 'Votre entrée a bien été prise en compte.',
+          student: options.student, rows: rows, button: done });
+      } else {
+        rows.push(['À vérifier', res.flag_reason || 'Un responsable va contrôler votre présence.', 'warn']);
+        showOutcome({ kind: 'warn', title: 'Enregistrée, à vérifier',
+          sub: 'Un responsable va contrôler votre présence.', student: options.student, rows: rows, button: done });
+      }
     }
 
     function confirmOnline() {
-      if (!navigator.geolocation) {
-        seal.classList.remove('ac-busy'); resetLabel();
-        showResult('ac-err', "Localisation indisponible sur cet appareil.");
-        return;
-      }
+      if (!navigator.geolocation) { fail("Localisation indisponible sur cet appareil."); return; }
       navigator.geolocation.getCurrentPosition(function (pos) {
         var zoneCheck = minimizePosition(pos.coords, options.zones);
         // Cours : le visage (selfie + test de vie) remplace WebAuthn. Relais et stages gardent WebAuthn.
         var device = options.webauthn === false ? Promise.resolve(null) : runWebAuthnCeremony(options.optionsUrl);
+        var faceChecked = false;
         device.then(function (wa) {
           return faceStep().then(function (face) {
+            faceChecked = !!(face.frames || face.enrolledNow);
             var params = { token: token, device_fingerprint: deviceFingerprint(),
                            face_frames: face.frames || null, face_no_camera: !!face.noCamera };
             if (wa) { params.webauthn_mode = wa.mode; params.webauthn_credential = wa.credential; }
@@ -231,21 +354,13 @@
           if (res && zoneCheck.outside && res.state === 'rejected') res.flag_reason = outsideMessage(zoneCheck, options.place);
           res = res || {};
           seal.classList.remove('ac-busy');
-          var isCheckout = res.phase === 'checkout';
-          var okLabel = isCheckout ? 'Sortie confirmée' : 'Entrée confirmée';
-          var warnLabel = isCheckout ? 'Sortie enregistrée, à vérifier' : 'Entrée enregistrée, à vérifier';
-          var errLabel = isCheckout ? 'Sortie refusée' : 'Entrée refusée';
-          if (res.error) { stamp('var(--brick)', ICON_CROSS); showResult('ac-err', res.error); }
-          else if (res.state === 'valid') { stamp('var(--green)', ICON_CHECK); showResult('ac-ok', okLabel); }
-          else if (res.state === 'rejected') { stamp('var(--brick)', ICON_CROSS); showResult('ac-err', errLabel, res.flag_reason); }
-          else { stamp('var(--amber)', ICON_WARN); showResult('ac-warn', warnLabel, res.flag_reason); }
+          present(res, faceChecked);
         }).catch(function (err) {
-          seal.classList.remove('ac-busy'); resetLabel();
-          showResult('ac-err', err && err.message ? err.message : "Vérification annulée ou refusée par votre téléphone.");
+          if (err && err.cancelled) { release(); return; }
+          fail(err && err.message ? err.message : "Vérification annulée ou refusée par votre téléphone.");
         });
       }, function () {
-        seal.classList.remove('ac-busy'); resetLabel();
-        showResult('ac-err', "Autorise la localisation pour confirmer ta présence.");
+        fail("Autorise la localisation pour confirmer ta présence.", 'Position nécessaire');
       }, { enableHighAccuracy: true, timeout: 15000 });
     }
   }

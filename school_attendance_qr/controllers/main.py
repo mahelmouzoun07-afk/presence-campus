@@ -65,7 +65,7 @@ class AttendanceScanController(http.Controller):
         if student and student.must_change_password:
             return request.redirect('/presence/mot-de-passe')
         return request.render('school_attendance_qr.scan_page_template', {
-            'token': token, 'room': room, 'session': session, 'phase_hint': phase_hint,
+            'token': token, 'room': room, 'session': session, 'phase_hint': phase_hint, 'student': student,
         })
 
     @staticmethod
