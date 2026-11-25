@@ -1,5 +1,5 @@
-/* Logique partagée du bouton de confirmation : géolocalisation, WebAuthn
- * (empreinte / Face ID / code PIN du téléphone), puis appel au serveur.
+/* Logique partagée du bouton de confirmation : géolocalisation, puis selfie
+ * (cours) ou WebAuthn (relais, stages), puis appel au serveur.
  * Utilisée à la fois par la page de scan (QR) et le tableau de bord
  * personnel (lien direct, sans QR). */
 (function (global) {
@@ -217,13 +217,15 @@
       }
       navigator.geolocation.getCurrentPosition(function (pos) {
         var zoneCheck = minimizePosition(pos.coords, options.zones);
-        runWebAuthnCeremony(options.optionsUrl).then(function (wa) {
+        // Cours : le visage (selfie + test de vie) remplace WebAuthn. Relais et stages gardent WebAuthn.
+        var device = options.webauthn === false ? Promise.resolve(null) : runWebAuthnCeremony(options.optionsUrl);
+        device.then(function (wa) {
           return faceStep().then(function (face) {
-            return rpcCall(options.confirmUrl || '/school/attendance/confirm', Object.assign({
-              token: token, device_fingerprint: deviceFingerprint(),
-              webauthn_mode: wa.mode, webauthn_credential: wa.credential,
-              face_frames: face.frames || null, face_no_camera: !!face.noCamera,
-            }, zoneCheck.send, options.params || {}));
+            var params = { token: token, device_fingerprint: deviceFingerprint(),
+                           face_frames: face.frames || null, face_no_camera: !!face.noCamera };
+            if (wa) { params.webauthn_mode = wa.mode; params.webauthn_credential = wa.credential; }
+            return rpcCall(options.confirmUrl || '/school/attendance/confirm',
+              Object.assign(params, zoneCheck.send, options.params || {}));
           });
         }).then(function (res) {
           if (res && zoneCheck.outside && res.state === 'rejected') res.flag_reason = outsideMessage(zoneCheck, options.place);

@@ -156,7 +156,7 @@ class SchoolStudentFace(models.Model):
     # ------------------------------------------------------------ réglages
     @api.model
     def policy(self):
-        return icp(self.env, 'face_policy', 'off')
+        return icp(self.env, 'face_policy', 'block')
 
     @api.model
     def threshold(self):
@@ -325,8 +325,11 @@ class SchoolStudentFace(models.Model):
         `erreur` : refus (réglage « bloquer » et visage clairement différent)."""
         student = student.sudo()
         policy = self.policy()
-        if policy == 'off' or not engine_available():
+        if policy == 'off':
             return None, None
+        if not engine_available():
+            # Panne du serveur : on ne refuse jamais l'étudiant pour ça, mais on ne valide pas non plus.
+            return None, "Vérification du visage indisponible"
         ok_at = session.pop(OK_SESSION_KEY, None)
         if ok_at and time.time() - ok_at < ENROLL_OK_TTL:
             return None, None

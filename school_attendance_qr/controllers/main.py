@@ -66,7 +66,6 @@ class AttendanceScanController(http.Controller):
             return request.redirect('/presence/mot-de-passe')
         return request.render('school_attendance_qr.scan_page_template', {
             'token': token, 'room': room, 'session': session, 'phase_hint': phase_hint,
-            'needs_webauthn_setup': bool(student and not student.webauthn_credential_id),
         })
 
     @staticmethod
@@ -107,20 +106,16 @@ class AttendanceScanController(http.Controller):
         return {'ok': True} if ok else {'error': error}
 
     @http.route('/school/attendance/confirm', type='json', auth='user')
-    def confirm(self, token, latitude, longitude, device_fingerprint, webauthn_mode, webauthn_credential,
-               accuracy=0, face_frames=None, face_no_camera=False):
-        """Appelé en JS après géolocalisation ET vérification WebAuthn
-        (empreinte / Face ID / code PIN du téléphone). L'étudiant est déduit
-        de l'utilisateur connecté, jamais transmis par le client."""
+    def confirm(self, token, latitude, longitude, device_fingerprint, accuracy=0,
+               face_frames=None, face_no_camera=False, **_ignored):
+        """Appelé en JS après la géolocalisation et le selfie (vérification du
+        visage). L'étudiant est déduit de l'utilisateur connecté, jamais
+        transmis par le client."""
         student = self._current_student()
         if not student:
             return {'error': "Aucun profil étudiant associé à ce compte."}
         if student.must_change_password:
             return {'error': "Choisissez d'abord votre mot de passe personnel (menu Profil)."}
-
-        error = verify_device(student, webauthn_mode, webauthn_credential)
-        if error:
-            return {'error': error}
 
         face_error, face_flag = request.env['school.student.face'].check_for_scan(
             student, face_frames, face_no_camera, request.session)

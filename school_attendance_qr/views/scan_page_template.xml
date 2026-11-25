@@ -62,7 +62,7 @@
             </li>
             <li style="display:flex; align-items:center; gap:12px;">
               <span class="step-pill muted">3</span>
-              <div><div class="step-title">Empreinte</div><div class="step-sub">Déverrouillage du téléphone</div></div>
+              <div><div class="step-title">Selfie</div><div class="step-sub">Votre visage, pris en direct</div></div>
             </li>
             <li style="display:flex; align-items:center; gap:12px;">
               <span class="step-pill muted">4</span>
@@ -70,13 +70,13 @@
             </li>
           </ol>
           <p style="font-size:12px; color:var(--muted); text-align:center; margin:14px 20px 0;">
-            Votre empreinte reste sur votre téléphone : seule une preuve chiffrée est envoyée.
+            Votre photo n'est jamais conservée : seule une empreinte numérique de votre visage est gardée.
           </p>
 
           <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function () {
               SchoolAttendance.initConfirmWidget('<t t-esc="token"/>', '<t t-esc="phase_hint"/>', {
-                face: true,
+                face: true, webauthn: false,
                 zones: [{ lat: <t t-esc="room.latitude"/>, lng: <t t-esc="room.longitude"/>, radius: <t t-esc="room.radius_meters"/> }],
               });
             });

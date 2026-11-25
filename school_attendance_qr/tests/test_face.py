@@ -182,6 +182,17 @@ class TestFace(SchoolCase):
     def check(self, student, frames=None, no_camera=False, session=None):
         return self.Face.check_for_scan(student, frames, no_camera, session if session is not None else FakeSession())
 
+    def test_face_is_mandatory_by_default(self):
+        self.env['ir.config_parameter'].sudo().search([('key', '=', 'school_attendance_qr.face_policy')]).unlink()
+        self.assertEqual(self.Face.policy(), 'block')
+        error, flag = self.check(self.student)
+        self.assertTrue(error and not flag)
+
+    def test_engine_down_flags_but_never_refuses(self):
+        self.env['ir.config_parameter'].sudo().set_param('school_attendance_qr.face_policy', 'block')
+        with patch('odoo.addons.school_attendance_qr.models.face.engine_available', return_value=False):
+            self.assertEqual(self.check(self.student), (None, 'Vérification du visage indisponible'))
+
     def test_policy_off_changes_nothing(self):
         self.env['ir.config_parameter'].sudo().set_param('school_attendance_qr.face_policy', 'off')
         self.assertEqual(self.check(self.student), (None, None))
