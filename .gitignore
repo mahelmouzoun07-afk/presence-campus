@@ -11,3 +11,9 @@ outils/*.lnk
 *.key
 .DS_Store
 Thumbs.db
+# Rapports de scan de sécurité (contiennent des détails de failles ; dépôt public)
+outils/rapports-securite/
+strix_runs/
+
+# Modèles de reconnaissance du visage (téléchargés par outils/telecharger-modeles-visage.sh)
+school_attendance_qr/face_models/

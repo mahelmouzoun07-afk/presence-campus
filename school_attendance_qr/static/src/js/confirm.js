@@ -203,6 +203,12 @@
       });
     });
 
+    /* Vérification du visage (seulement sur la page des cours, si l'école l'a activée). */
+    function faceStep() {
+      if (!options.face || !global.SchoolFace) return Promise.resolve({});
+      return global.SchoolFace.prepare().then(function (out) { return out && !out.skip ? out : {}; });
+    }
+
     function confirmOnline() {
       if (!navigator.geolocation) {
         seal.classList.remove('ac-busy'); resetLabel();
@@ -212,10 +218,13 @@
       navigator.geolocation.getCurrentPosition(function (pos) {
         var zoneCheck = minimizePosition(pos.coords, options.zones);
         runWebAuthnCeremony(options.optionsUrl).then(function (wa) {
-          return rpcCall(options.confirmUrl || '/school/attendance/confirm', Object.assign({
-            token: token, device_fingerprint: deviceFingerprint(),
-            webauthn_mode: wa.mode, webauthn_credential: wa.credential,
-          }, zoneCheck.send, options.params || {}));
+          return faceStep().then(function (face) {
+            return rpcCall(options.confirmUrl || '/school/attendance/confirm', Object.assign({
+              token: token, device_fingerprint: deviceFingerprint(),
+              webauthn_mode: wa.mode, webauthn_credential: wa.credential,
+              face_frames: face.frames || null, face_no_camera: !!face.noCamera,
+            }, zoneCheck.send, options.params || {}));
+          });
         }).then(function (res) {
           if (res && zoneCheck.outside && res.state === 'rejected') res.flag_reason = outsideMessage(zoneCheck, options.place);
           res = res || {};

@@ -11,6 +11,7 @@ PROOF_LEVELS = [
     ('B', "Relayée par un responsable"),
     ('C', "Validée hors ligne"),
     ('D', "Double validation superviseur"),
+    ('E', "Visage non vérifié"),
 ]
 
 

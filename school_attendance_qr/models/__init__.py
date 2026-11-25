@@ -6,6 +6,7 @@ from . import student_security
 from . import qr_style
 from . import room_qr
 from . import attendance
+from . import face
 from . import portal
 from . import task
 from . import security
